@@ -1,0 +1,12 @@
+using CarRental.Application.DTOs;
+
+namespace CarRental.Application.Interfaces;
+
+public interface IUserService
+{
+    Task<IEnumerable<UserDto>> GetAllUsersAsync();
+    Task<UserDto?> GetUserByIdAsync(Guid id);
+    Task<UserDto> CreateUserAsync(CreateUserDto dto);
+    Task UpdateUserAsync(Guid id, UpdateUserDto dto);
+    Task DeleteUserAsync(Guid id);
+}

@@ -1,0 +1,113 @@
+## .NET / C#
+
+# Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.userprefs
+
+# NuGet
+*.nupkg
+*.snupkg
+**/[Pp]ackages/
+!**/[Pp]ackages/build/
+*.nuget.props
+*.nuget.targets
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# Rider
+.idea/
+*.sln.iml
+
+# VS Code
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Publish output
+**/publish/
+**/PublishProfiles/
+
+# .NET hot reload
+*.hotreload
+
+# Test results
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+TestResult.xml
+coverage/
+*.coverage
+*.coveragexml
+coverage.json
+coverage.cobertura.xml
+
+# dotnet tool manifest (keep this if you want to share tools)
+# .config/dotnet-tools.json
+
+## Docker
+
+# Docker override files (local dev only)
+docker-compose.override.yml
+docker-compose.*.override.yml
+
+# Docker build cache
+.dockerignore.bak
+
+## Secrets & Environment
+
+.env
+.env.*
+!.env.example
+*.pfx
+*.p12
+*.pem
+*.key
+appsettings.Development.json
+appsettings.Local.json
+secrets.json
+
+## OS
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+*~
+
+## Misc
+
+*.log
+*.tmp
+*.temp
+*.bak
+*.swp
+
+
