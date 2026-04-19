@@ -12,6 +12,8 @@ public class AppDbContext : DbContext
     public DbSet<User> Users => Set<User>();
     public DbSet<Car> Cars => Set<Car>();
     public DbSet<Fine> Fines => Set<Fine>();
+    public DbSet<EntranceFee> EntranceFees => Set<EntranceFee>();
+
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -48,7 +50,7 @@ public class AppDbContext : DbContext
             e.HasKey(c => c.CarPlate);
             e.Property(c => c.CarPlate).HasMaxLength(20);
             e.Property(c => c.TotalDebt).HasColumnType("decimal(18,2)");
-
+            e.Property(c => c.RentalPrice).HasColumnType("decimal(18,2)");
             e.HasOne(c => c.User)
              .WithMany(u => u.Cars)
              .HasForeignKey(c => c.UserId)
@@ -72,15 +74,24 @@ public class AppDbContext : DbContext
              .OnDelete(DeleteBehavior.Cascade);
         });
 
-        // ── Seed: default super_admin ────────────────────────────────────────
-        modelBuilder.Entity<Admin>().HasData(new Admin
+        // ── EntranceFee ─────────────────────────────────────────────────────────
+        modelBuilder.Entity<EntranceFee>(e =>
         {
-            Id = Guid.Parse("00000000-0000-0000-0000-000000000001"),
-            Name = "Super Admin",
-            Username = "superadmin",
-            // Password: Admin@1234  (change immediately after first login)
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin@1234"),
-            Role = AdminRole.SuperAdmin
+            e.HasKey(f => f.Id);
+            e.Property(f => f.TripNumber).IsRequired().HasMaxLength(100);
+            e.HasIndex(f => f.TripNumber).IsUnique();
+            e.Property(f => f.CarPlate).IsRequired().HasMaxLength(20);
+            e.Property(f => f.Amount).HasColumnType("decimal(18,2)");
+            e.Property(f => f.GateName).HasMaxLength(200);
+            e.Property(f => f.Direction).HasMaxLength(100);
+
+            e.HasOne(f => f.Car)
+             .WithMany(c => c.EntranceFees)
+             .HasForeignKey(f => f.CarPlate)
+             .HasPrincipalKey(c => c.CarPlate)
+             .OnDelete(DeleteBehavior.Cascade);
         });
+
+
     }
 }

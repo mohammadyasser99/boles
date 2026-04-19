@@ -11,19 +11,26 @@ public class FineService : IFineService
     private readonly IFineRepository _fineRepository;
     private readonly ICarRepository _carRepository;
     private readonly IExcelParserService _excelParser;
-
+    private readonly IDebtCalculatorService _debtCalculator;
+    private readonly IUnitOfWork _unitOfWork;
     public FineService(
         IFineRepository fineRepository,
         ICarRepository carRepository,
-        IExcelParserService excelParser)
+        IExcelParserService excelParser,
+        IDebtCalculatorService debtCalculator,
+        IUnitOfWork unitOfWork)
     {
         _fineRepository = fineRepository;
         _carRepository = carRepository;
         _excelParser = excelParser;
+        _debtCalculator = debtCalculator;
+        _unitOfWork = unitOfWork;
+
     }
 
     public async Task<FineImportResultDto> ImportFinesFromExcelAsync(IFormFile file)
     {
+        await using var transaction = await _unitOfWork.BeginTransactionAsync();
         try
         {
             var rows = await _excelParser.ParseFinesExcelAsync(file);
@@ -45,7 +52,7 @@ public class FineService : IFineService
                 .Select(g => g.First())
                 .ToList();
 
-            var carSummaries = new Dictionary<string, CarFinesSummaryDto>(StringComparer.OrdinalIgnoreCase);
+            var carSummaries = new List<CarFinesSummaryDto>();
 
             // Step 1: Create all missing Car records FIRST
             var affectedPlates = newRows.Select(r => r.CarPlate).Distinct().ToList();
@@ -76,14 +83,12 @@ public class FineService : IFineService
                 await _fineRepository.AddRangeAsync(finesToAdd);
 
             // Step 3: Recalculate TotalDebt per car
+            // Step 3: Recalculate TotalDebt for each affected car  ✅ FIXED
             foreach (var plate in affectedPlates)
             {
-                var car = await _carRepository.GetByPlateAsync(plate);
-                if (car == null) continue;
+                await _debtCalculator.RecalculateCarDebtAsync(plate);
 
-                var totalDebt = await _fineRepository.GetTotalFinesByCarPlateAsync(plate);
-                car.TotalDebt = totalDebt;
-                await _carRepository.UpdateAsync(car);
+                var totalFines = await _fineRepository.GetTotalFinesByCarPlateAsync(plate);
 
                 var newAmount = newRows
                     .Where(r => r.CarPlate.Equals(plate, StringComparison.OrdinalIgnoreCase))
@@ -92,23 +97,26 @@ public class FineService : IFineService
                 var newCount = newRows
                     .Count(r => r.CarPlate.Equals(plate, StringComparison.OrdinalIgnoreCase));
 
-                carSummaries[plate] = new CarFinesSummaryDto(plate, newAmount, totalDebt, newCount);
+                carSummaries.Add(new CarFinesSummaryDto(plate, newAmount, totalFines, newCount));
             }
+            await _unitOfWork.CommitAsync();
 
             return new FineImportResultDto(
                 TotalRowsProcessed: rows.Count,
                 NewFinesAdded: finesToAdd.Count,
                 DuplicatesSkipped: rows.Count - finesToAdd.Count,
-                CarSummaries: carSummaries.Values.ToList()
+                CarSummaries: carSummaries
             );
         }
         catch (InvalidOperationException ex)
         {
+            await _unitOfWork.RollbackAsync();
             throw new InvalidOperationException($"Excel parsing failed: {ex.Message}", ex);
         }
 
         catch (Exception ex)
         {
+            await _unitOfWork.RollbackAsync();
             throw new InvalidOperationException($"Unexpected error during import: {ex.Message}", ex);
         }
     }

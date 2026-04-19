@@ -89,4 +89,20 @@ public class CarsController : ControllerBase
             return NotFound(ApiResponse<object>.Fail(ex.Message));
         }
     }
+
+    [HttpPatch("{carPlate}/rental-price")]
+    public async Task<IActionResult> SetRentalPrice(string carPlate, [FromBody] decimal rentalPrice)
+    {
+        try
+        {
+            await _carService.SetRentalPriceAsync(carPlate, rentalPrice);
+            return Ok(ApiResponse<object>.Ok(null, "Rental price updated successfully."));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ApiResponse<object>.Fail(ex.Message));
+        }
+    }
+
+
 }

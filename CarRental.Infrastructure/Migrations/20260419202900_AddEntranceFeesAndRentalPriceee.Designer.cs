@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CarRental.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260418201006_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20260419202900_AddEntranceFeesAndRentalPriceee")]
+    partial class AddEntranceFeesAndRentalPriceee
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -63,16 +63,6 @@ namespace CarRental.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("Admins");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("00000000-0000-0000-0000-000000000001"),
-                            Name = "Super Admin",
-                            PasswordHash = "$2a$11$QEjwaNJr6iw29tbeCOc8Nuap5FcSDGSqOFmCcdx6K02Ejd2f9ZiH.",
-                            Role = "SuperAdmin",
-                            Username = "superadmin"
-                        });
                 });
 
             modelBuilder.Entity("CarRental.Domain.Entities.Car", b =>
@@ -80,6 +70,9 @@ namespace CarRental.Infrastructure.Migrations
                     b.Property<string>("CarPlate")
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
+
+                    b.Property<decimal?>("RentalPrice")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("TotalDebt")
                         .HasColumnType("decimal(18,2)");
@@ -92,6 +85,49 @@ namespace CarRental.Infrastructure.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("Cars");
+                });
+
+            modelBuilder.Entity("CarRental.Domain.Entities.EntranceFee", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("CarPlate")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Direction")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("GateName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime>("ImportedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("TripDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TripNumber")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CarPlate");
+
+                    b.HasIndex("TripNumber")
+                        .IsUnique();
+
+                    b.ToTable("EntranceFees");
                 });
 
             modelBuilder.Entity("CarRental.Domain.Entities.Fine", b =>
@@ -172,6 +208,17 @@ namespace CarRental.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("CarRental.Domain.Entities.EntranceFee", b =>
+                {
+                    b.HasOne("CarRental.Domain.Entities.Car", "Car")
+                        .WithMany("EntranceFees")
+                        .HasForeignKey("CarPlate")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Car");
+                });
+
             modelBuilder.Entity("CarRental.Domain.Entities.Fine", b =>
                 {
                     b.HasOne("CarRental.Domain.Entities.Car", "Car")
@@ -185,6 +232,8 @@ namespace CarRental.Infrastructure.Migrations
 
             modelBuilder.Entity("CarRental.Domain.Entities.Car", b =>
                 {
+                    b.Navigation("EntranceFees");
+
                     b.Navigation("Fines");
                 });
 

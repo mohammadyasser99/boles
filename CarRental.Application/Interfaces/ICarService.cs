@@ -9,4 +9,6 @@ public interface ICarService
     Task<CarDto> CreateCarAsync(CreateCarDto dto);
     Task AssignCarToUserAsync(AssignCarToUserDto dto);
     Task DeleteCarAsync(string carPlate);
+    Task SetRentalPriceAsync(string carPlate, decimal rentalPrice);
+
 }

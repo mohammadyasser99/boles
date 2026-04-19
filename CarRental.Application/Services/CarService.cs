@@ -19,13 +19,13 @@ public class CarService : ICarService
     public async Task<IEnumerable<CarDto>> GetAllCarsAsync()
     {
         var cars = await _carRepository.GetAllAsync();
-        return cars.Select(c => new CarDto(c.CarPlate, c.TotalDebt, c.UserId, c.User?.Name));
+        return cars.Select(c => new CarDto(c.CarPlate, c.TotalDebt,c.RentalPrice, c.UserId, c.User?.Name));
     }
 
     public async Task<CarDto?> GetCarByPlateAsync(string carPlate)
     {
         var car = await _carRepository.GetByPlateAsync(carPlate);
-        return car == null ? null : new CarDto(car.CarPlate, car.TotalDebt, car.UserId, car.User?.Name);
+        return car == null ? null : new CarDto(car.CarPlate, car.TotalDebt,car.RentalPrice, car.UserId, car.User?.Name);
     }
 
     public async Task<CarDto> CreateCarAsync(CreateCarDto dto)
@@ -36,7 +36,7 @@ public class CarService : ICarService
 
         var car = new Car { CarPlate = dto.CarPlate, TotalDebt = 0 };
         await _carRepository.AddAsync(car);
-        return new CarDto(car.CarPlate, car.TotalDebt, null, null);
+        return new CarDto(car.CarPlate, car.TotalDebt,car.RentalPrice, null, null);
     }
 
     public async Task AssignCarToUserAsync(AssignCarToUserDto dto)
@@ -56,5 +56,13 @@ public class CarService : ICarService
         _ = await _carRepository.GetByPlateAsync(carPlate)
             ?? throw new KeyNotFoundException($"Car '{carPlate}' not found.");
         await _carRepository.DeleteAsync(carPlate);
+    }
+    public async Task SetRentalPriceAsync(string carPlate, decimal rentalPrice)
+    {
+        var car = await _carRepository.GetByPlateAsync(carPlate)
+            ?? throw new KeyNotFoundException($"Car '{carPlate}' not found.");
+
+        car.RentalPrice = rentalPrice;
+        await _carRepository.UpdateAsync(car);
     }
 }

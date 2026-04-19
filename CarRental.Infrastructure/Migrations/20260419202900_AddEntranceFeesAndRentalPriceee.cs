@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace CarRental.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class AddEntranceFeesAndRentalPriceee : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -48,6 +48,7 @@ namespace CarRental.Infrastructure.Migrations
                 {
                     CarPlate = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
                     TotalDebt = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    RentalPrice = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
                     UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
                 },
                 constraints: table =>
@@ -59,6 +60,30 @@ namespace CarRental.Infrastructure.Migrations
                         principalTable: "Users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.SetNull);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "EntranceFees",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TripNumber = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    CarPlate = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    Amount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    GateName = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    Direction = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    TripDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ImportedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_EntranceFees", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_EntranceFees_Cars_CarPlate",
+                        column: x => x.CarPlate,
+                        principalTable: "Cars",
+                        principalColumn: "CarPlate",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -84,11 +109,6 @@ namespace CarRental.Infrastructure.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
-            migrationBuilder.InsertData(
-                table: "Admins",
-                columns: new[] { "Id", "Name", "PasswordHash", "RefreshToken", "RefreshTokenExpiry", "Role", "Username" },
-                values: new object[] { new Guid("00000000-0000-0000-0000-000000000001"), "Super Admin", "$2a$11$QEjwaNJr6iw29tbeCOc8Nuap5FcSDGSqOFmCcdx6K02Ejd2f9ZiH.", null, null, "SuperAdmin", "superadmin" });
-
             migrationBuilder.CreateIndex(
                 name: "IX_Admins_Username",
                 table: "Admins",
@@ -99,6 +119,17 @@ namespace CarRental.Infrastructure.Migrations
                 name: "IX_Cars_UserId",
                 table: "Cars",
                 column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_EntranceFees_CarPlate",
+                table: "EntranceFees",
+                column: "CarPlate");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_EntranceFees_TripNumber",
+                table: "EntranceFees",
+                column: "TripNumber",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_Fines_CarPlate",
@@ -123,6 +154,9 @@ namespace CarRental.Infrastructure.Migrations
         {
             migrationBuilder.DropTable(
                 name: "Admins");
+
+            migrationBuilder.DropTable(
+                name: "EntranceFees");
 
             migrationBuilder.DropTable(
                 name: "Fines");

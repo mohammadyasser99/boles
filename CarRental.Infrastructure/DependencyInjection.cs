@@ -21,7 +21,7 @@ public static class DependencyInjection
             options.UseSqlServer(
                 configuration.GetConnectionString("DefaultConnection"),
                 b => b.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName)));
-
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
         // ── Repositories ─────────────────────────────────────────────────────
         services.AddScoped<IAdminRepository, AdminRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
@@ -38,6 +38,15 @@ public static class DependencyInjection
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<ICarService, CarService>();
         services.AddScoped<IAdminService, AdminService>();
+
+        services.AddScoped<IEntranceFeeRepository, EntranceFeeRepository>();
+        services.AddScoped<IExcelEntranceFeeParserService, ExcelEntranceFeeParserService>();
+        services.AddScoped<IEntranceFeeService, EntranceFeeService>();
+
+        services.AddScoped<IDebtCalculatorService, DebtCalculatorService>();
+
+
+
 
         return services;
     }
