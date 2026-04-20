@@ -55,7 +55,7 @@ namespace CarRental.Application.Services
 
                 var affectedPlates = newRows.Select(r => r.CarPlate).Distinct().ToList();
 
-                // Step 1: Ensure all car records exist BEFORE inserting fees (FK requirement)
+                // Step 1: Ensure all car records exist BEFORE inserting fees (FK requirement)  (insering cars)
                 foreach (var plate in affectedPlates)
                 {
                     var existing = await _carRepository.GetByPlateAsync(plate);
@@ -85,25 +85,25 @@ namespace CarRental.Application.Services
                 {
                     await _debtCalculator.RecalculateCarDebtAsync(plate);
 
-                    var totalEntranceFees = await _entranceFeeRepository
-                        .GetTotalEntranceFeesByCarPlateAsync(plate);
+                    //var totalEntranceFees = await _entranceFeeRepository
+                    //    .GetTotalEntranceFeesByCarPlateAsync(plate);
 
-                    var newAmount = newRows
-                        .Where(r => r.CarPlate.Equals(plate, StringComparison.OrdinalIgnoreCase))
-                        .Sum(r => r.Amount);
+                    //var newAmount = newRows
+                    //    .Where(r => r.CarPlate.Equals(plate, StringComparison.OrdinalIgnoreCase))
+                    //    .Sum(r => r.Amount);
 
-                    var newCount = newRows
-                        .Count(r => r.CarPlate.Equals(plate, StringComparison.OrdinalIgnoreCase));
+                    //var newCount = newRows
+                    //    .Count(r => r.CarPlate.Equals(plate, StringComparison.OrdinalIgnoreCase));
 
-                    carSummaries.Add(new CarEntranceFeeSummaryDto(plate, newAmount, totalEntranceFees, newCount));
+                    //carSummaries.Add(new CarEntranceFeeSummaryDto(plate, newAmount, totalEntranceFees, newCount));
                 }
                 await _unitOfWork.CommitAsync();
 
                 return new EntranceFeeImportResultDto(
                     TotalRowsProcessed: rows.Count,
                     NewFeesAdded: feesToAdd.Count,
-                    DuplicatesSkipped: rows.Count - feesToAdd.Count,
-                    CarSummaries: carSummaries
+                    DuplicatesSkipped: rows.Count - feesToAdd.Count
+              //      CarSummaries: carSummaries
                 );
             }
             catch (InvalidOperationException ex)

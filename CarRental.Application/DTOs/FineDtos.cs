@@ -3,8 +3,8 @@ namespace CarRental.Application.DTOs;
 public record FineImportResultDto(
     int TotalRowsProcessed,
     int NewFinesAdded,
-    int DuplicatesSkipped,
-    List<CarFinesSummaryDto> CarSummaries
+    int DuplicatesSkipped
+//    List<CarFinesSummaryDto> CarSummaries
 );
 
 public record CarFinesSummaryDto(

@@ -88,24 +88,24 @@ public class FineService : IFineService
             {
                 await _debtCalculator.RecalculateCarDebtAsync(plate);
 
-                var totalFines = await _fineRepository.GetTotalFinesByCarPlateAsync(plate);
+                //var totalFines = await _fineRepository.GetTotalFinesByCarPlateAsync(plate);
 
-                var newAmount = newRows
-                    .Where(r => r.CarPlate.Equals(plate, StringComparison.OrdinalIgnoreCase))
-                    .Sum(r => r.Amount);
+                //var newAmount = newRows
+                //    .Where(r => r.CarPlate.Equals(plate, StringComparison.OrdinalIgnoreCase))
+                //    .Sum(r => r.Amount);
 
-                var newCount = newRows
-                    .Count(r => r.CarPlate.Equals(plate, StringComparison.OrdinalIgnoreCase));
+                //var newCount = newRows
+                //    .Count(r => r.CarPlate.Equals(plate, StringComparison.OrdinalIgnoreCase));
 
-                carSummaries.Add(new CarFinesSummaryDto(plate, newAmount, totalFines, newCount));
+                //carSummaries.Add(new CarFinesSummaryDto(plate, newAmount, totalFines, newCount));
             }
             await _unitOfWork.CommitAsync();
 
             return new FineImportResultDto(
                 TotalRowsProcessed: rows.Count,
                 NewFinesAdded: finesToAdd.Count,
-                DuplicatesSkipped: rows.Count - finesToAdd.Count,
-                CarSummaries: carSummaries
+                DuplicatesSkipped: rows.Count - finesToAdd.Count
+            //    CarSummaries: carSummaries
             );
         }
         catch (InvalidOperationException ex)
