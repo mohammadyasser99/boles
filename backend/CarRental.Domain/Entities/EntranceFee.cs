@@ -22,8 +22,9 @@ namespace CarRental.Domain.Entities
         public string? Direction { get; set; }
         public DateTime? TripDate { get; set; }
         public DateTime ImportedAt { get; set; } = DateTime.UtcNow;
+        public bool IsPaid { get; set; } = false;
 
         // Navigation
-        public Car? Car { get; set; }
+        public virtual Car? Car { get; set; }
     }
 }

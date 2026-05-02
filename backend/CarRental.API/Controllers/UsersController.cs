@@ -1,6 +1,8 @@
 using CarRental.Application.Common;
 using CarRental.Application.DTOs;
 using CarRental.Application.Interfaces;
+using CarRental.Application.Services;
+using CarRental.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -8,12 +10,15 @@ namespace CarRental.API.Controllers;
 
 [ApiController]
 [Route("api/users")]
-[Authorize]
+//[Authorize]
 public class UsersController : ControllerBase
 {
     private readonly IUserService _userService;
-
-    public UsersController(IUserService userService) => _userService = userService;
+    private readonly IUserDocumentService _documentService;
+    public UsersController(IUserService userService ,IUserDocumentService userDocumentService) {
+        _userService = userService;
+        _documentService = userDocumentService;
+    }
 
     /// <summary>Get all users.</summary>
     [HttpGet]
@@ -41,13 +46,30 @@ public class UsersController : ControllerBase
     [HttpPost]
     [ProducesResponseType(typeof(ApiResponse<UserDto>), 201)]
     [ProducesResponseType(typeof(ApiResponse<object>), 400)]
-    public async Task<IActionResult> Create([FromBody] CreateUserDto dto)
+    public async Task<IActionResult> CreateUserWithCar([FromBody] CreateUserWithCarDto dto)
     {
         try
         {
-            var result = await _userService.CreateUserAsync(dto);
+            var result = await _userService.CreateUserWithCarAsync(dto);
             return CreatedAtAction(nameof(GetById), new { id = result.Id },
                 ApiResponse<UserDto>.Ok(result, "User created successfully."));
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ApiResponse<object>.Fail(ex.Message));
+        }
+    }
+
+    //update the user and the car
+    [HttpPost("UpdateCarAndUser")]
+    [ProducesResponseType(typeof(ApiResponse<string>), 201)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    public async Task<IActionResult> ModifyCarAndUser([FromBody] CreateUserWithCarDto dto)
+    {
+        try
+        {
+            await _userService.ModifyUserAndCar(dto);
+            return Ok("updated successfully");
         }
         catch (Exception ex)
         {
@@ -88,4 +110,92 @@ public class UsersController : ControllerBase
             return NotFound(ApiResponse<object>.Fail(ex.Message));
         }
     }
+
+    /// <summary>
+    /// Upload a document for a user.
+    /// documentType: 1 = Contract (PDF only), 2 = DrivingLicence (PDF/image), 3 = NationalId (PDF/image)
+    /// </summary>
+    [HttpPost("{id:guid}/documents")]
+    [ProducesResponseType(typeof(ApiResponse<UserDocumentDto>), 201)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> UploadDocument(
+        Guid id,
+        IFormFile file,
+        [FromQuery] DocumentType documentType)
+    {
+        if (file == null || file.Length == 0)
+            return BadRequest(ApiResponse<object>.Fail("No file uploaded."));
+
+        try
+        {
+            var result = await _documentService.UploadDocumentAsync(id, file, documentType);
+            return StatusCode(201, ApiResponse<UserDocumentDto>.Ok(result, "Document uploaded successfully."));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ApiResponse<object>.Fail(ex.Message));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ApiResponse<object>.Fail(ex.Message));
+        }
+    }
+
+    /// <summary>Get all documents for a user.</summary>
+    [HttpGet("{id:guid}/documents")]
+    [ProducesResponseType(typeof(ApiResponse<IEnumerable<UserDocumentDto>>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> GetDocuments(Guid id)
+    {
+        try
+        {
+            var result = await _documentService.GetUserDocumentsAsync(id);
+            return Ok(ApiResponse<IEnumerable<UserDocumentDto>>.Ok(result));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ApiResponse<object>.Fail(ex.Message));
+        }
+    }
+
+    /// <summary>Download a specific document by document ID.</summary>
+    [HttpGet("documents/{documentId:guid}/download")]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> DownloadDocument(Guid documentId)
+    {
+        try
+        {
+            var result = await _documentService.DownloadDocumentAsync(documentId);
+            return File(result.Bytes, result.ContentType, result.FileName);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ApiResponse<object>.Fail(ex.Message));
+        }
+        catch (FileNotFoundException ex)
+        {
+            return NotFound(ApiResponse<object>.Fail(ex.Message));
+        }
+    }
+
+    /// <summary>Delete a specific document.</summary>
+    [HttpDelete("documents/{documentId:guid}")]
+    [ProducesResponseType(typeof(ApiResponse<object>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> DeleteDocument(Guid documentId)
+    {
+        try
+        {
+            await _documentService.DeleteDocumentAsync(documentId);
+            return Ok(ApiResponse<object>.Ok(null, "Document deleted successfully."));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ApiResponse<object>.Fail(ex.Message));
+        }
+    }
+
+
 }

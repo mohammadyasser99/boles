@@ -15,7 +15,9 @@ public class Fine
     public DateTime? ViolationDate { get; set; }
     public string? Description { get; set; }
     public DateTime ImportedAt { get; set; } = DateTime.UtcNow;
+    public bool IsPaid { get; set; } = false;
+
 
     // Navigation
-    public Car? Car { get; set; }
+    public virtual Car? Car { get; set; }
 }

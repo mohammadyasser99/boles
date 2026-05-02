@@ -43,5 +43,37 @@ namespace CarRental.API.Controllers
                 return BadRequest(ApiResponse<object>.Fail(ex.Message));
             }
         }
+
+        /// <summary>Mark entrance fee as paid.</summary>
+        [HttpPatch("{TripNumber}/pay")]
+        [ProducesResponseType(typeof(ApiResponse<object>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+        public async Task<IActionResult> MarkAsPaid(string TripNumber)
+        {
+            try
+            {
+                await _entranceFeeService.MarkAsPaidAsync(TripNumber);
+
+                return Ok(ApiResponse<object>.Ok(null, "Entrance fee marked as paid."));
+            }
+            catch (Exception ex)
+            {
+                return NotFound(ApiResponse<object>.Fail(ex.Message));
+            }
+        }
+
+        /// <summary>Search entrance fees by TripNumber and IsPaid</summary>
+        [HttpGet("search")]
+        public async Task<IActionResult> Search(
+            string? tripNumber,
+            bool? isPaid,
+            int page = 1,
+            int pageSize = 10)
+        {
+            var result = await _entranceFeeService.SearchAsync(tripNumber, isPaid, page, pageSize);
+            return Ok(ApiResponse<PagedResult<EntranceFeeDetailsDto>>.Ok(result));
+        }
+
+
     }
     }

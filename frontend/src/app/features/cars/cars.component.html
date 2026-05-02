@@ -1,0 +1,152 @@
+ <p-toast />
+    <p-confirmDialog />
+
+    <div class="space-y-5">
+      <!-- Header -->
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="font-display font-800 text-surface-800 text-2xl">Cars</h1>
+          <p class="text-surface-400 text-sm mt-1">Manage registered car plates</p>
+        </div>
+        <button (click)="openCreate()" pButton label="Add Car" icon="pi pi-plus"
+                class="!bg-brand-600 !border-brand-600 !font-display !font-700 !rounded-xl shadow-glow"></button>
+      </div>
+
+      <!-- Table -->
+      <div class="bg-white rounded-2xl shadow-card border border-surface-200 overflow-hidden">
+        <p-table [value]="cars()" [loading]="loading()" [paginator]="true" [rows]="10"
+                 [globalFilterFields]="['carPlate','userName']" styleClass="border-0">
+          <ng-template pTemplate="caption">
+            <div class="flex items-center gap-3 px-2 py-1">
+              <div class="relative flex-1 max-w-xs">
+                <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-surface-400 text-sm"></i>
+                <input pInputText placeholder="Search plates..." (input)="onSearch($event, dt)"
+                       class="!pl-9 !rounded-xl !border-surface-200 w-full text-sm" #dt />
+              </div>
+              <span class="text-xs text-surface-400 font-mono ml-auto">{{ cars().length }} cars</span>
+            </div>
+          </ng-template>
+          <ng-template pTemplate="header">
+            <tr>
+              <th>Car Plate</th>
+              <th>Assigned User</th>
+              <th>Rental Price (AED)</th>
+              <th>Total Debt (AED)</th>
+              <th>Status</th>
+              <th class="text-right">Actions</th>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="body" let-car>
+            <tr>
+              <td>
+                <span class="font-mono font-700 text-surface-800 bg-brand-50 text-brand-700 px-3 py-1.5 rounded-lg text-sm">
+                  {{ car.carPlate }}
+                </span>
+              </td>
+              <td>
+                @if (car.userName) {
+                  <div class="flex items-center gap-2">
+                    <div class="w-6 h-6 bg-brand-100 rounded-full flex items-center justify-center">
+                      <span class="text-brand-700 text-xs font-display font-700">{{ car.userName.charAt(0) }}</span>
+                    </div>
+                    <span class="text-sm text-surface-700">{{ car.userName }}</span>
+                  </div>
+                } @else {
+                  <span class="text-surface-300 text-sm italic">Unassigned</span>
+                }
+              </td>
+              <td>
+                <span class="font-mono text-sm text-surface-700">{{ car.rentalPrice | number:'1.2-2' }}</span>
+              </td>
+              <td>
+                <span class="font-display font-700" [class]="car.totalDebt > 0 ? 'text-red-600' : 'text-green-600'">
+                  {{ car.totalDebt | number:'1.2-2' }}
+                </span>
+              </td>
+              <td>
+                @if (car.totalDebt > 0) {
+                  <p-tag value="Has Debt" severity="danger" />
+                } @else {
+                  <p-tag value="Clear" severity="success" />
+                }
+              </td>
+              <td>
+                <div class="flex justify-end gap-1">
+                  <button pButton icon="pi pi-link" pTooltip="Assign User"
+                          class="!p-button-text !p-button-sm !text-brand-500 !rounded-lg"
+                          (click)="openAssign(car)"></button>
+                  <button pButton icon="pi pi-dollar" pTooltip="Set Rental Price"
+                          class="!p-button-text !p-button-sm !text-green-500 !rounded-lg"
+                          (click)="openRentalPrice(car)"></button>
+                  <button pButton icon="pi pi-trash" pTooltip="Delete"
+                          class="!p-button-text !p-button-sm !text-red-400 !rounded-lg"
+                          (click)="deleteCar(car)"></button>
+                </div>
+              </td>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="emptymessage">
+            <tr><td colspan="6" class="text-center text-surface-400 py-12 font-body">No cars registered yet.</td></tr>
+          </ng-template>
+        </p-table>
+      </div>
+    </div>
+
+    <!-- Create Car Dialog -->
+    <p-dialog header="Register New Car" [(visible)]="showCreate" [modal]="true" [style]="{width:'420px'}">
+      <div class="space-y-4 pt-2">
+        <div class="space-y-1.5">
+          <label class="text-xs font-display font-600 text-surface-500 uppercase tracking-wider">Car Plate *</label>
+          <input pInputText [(ngModel)]="newPlate" placeholder="e.g. 88564" class="w-full !rounded-xl" />
+        </div>
+        <div class="space-y-1.5">
+          <label class="text-xs font-display font-600 text-surface-500 uppercase tracking-wider">Rental Price (AED)</label>
+          <p-inputNumber [(ngModel)]="newRentalPrice" [min]="0" [minFractionDigits]="2"
+                         placeholder="0.00" styleClass="w-full" inputStyleClass="w-full !rounded-xl" />
+        </div>
+      </div>
+      <ng-template pTemplate="footer">
+        <button pButton label="Cancel" class="!p-button-text !rounded-xl" (click)="showCreate=false"></button>
+        <button pButton label="Register" icon="pi pi-check" [loading]="saving()"
+                class="!bg-brand-600 !border-brand-600 !rounded-xl !font-display !font-700" (click)="createCar()"></button>
+      </ng-template>
+    </p-dialog>
+
+    <!-- Assign User Dialog -->
+    <p-dialog header="Assign Car to User" [(visible)]="showAssign" [modal]="true" [style]="{width:'420px'}">
+      <div class="space-y-4 pt-2">
+        <div class="px-3 py-2 bg-brand-50 rounded-xl">
+          <p class="text-xs text-brand-600 font-mono">Plate: <strong>{{ selectedCar()?.carPlate }}</strong></p>
+        </div>
+        <div class="space-y-1.5">
+          <label class="text-xs font-display font-600 text-surface-500 uppercase tracking-wider">Select User *</label>
+          <p-dropdown [options]="userOptions()" [(ngModel)]="selectedUserId"
+                      optionLabel="label" optionValue="value"
+                      placeholder="Choose a user" styleClass="w-full" panelStyleClass="!rounded-xl" />
+        </div>
+      </div>
+      <ng-template pTemplate="footer">
+        <button pButton label="Cancel" class="!p-button-text !rounded-xl" (click)="showAssign=false"></button>
+        <button pButton label="Assign" icon="pi pi-check" [loading]="saving()"
+                class="!bg-brand-600 !border-brand-600 !rounded-xl !font-display !font-700" (click)="assignCar()"></button>
+      </ng-template>
+    </p-dialog>
+
+    <!-- Rental Price Dialog -->
+    <p-dialog header="Set Rental Price" [(visible)]="showRentalPrice" [modal]="true" [style]="{width:'380px'}">
+      <div class="space-y-4 pt-2">
+        <div class="px-3 py-2 bg-green-50 rounded-xl">
+          <p class="text-xs text-green-700 font-mono">Plate: <strong>{{ selectedCar()?.carPlate }}</strong></p>
+        </div>
+        <div class="space-y-1.5">
+          <label class="text-xs font-display font-600 text-surface-500 uppercase tracking-wider">Monthly Rental (AED) *</label>
+          <p-inputNumber [(ngModel)]="rentalPriceValue" [min]="0" [minFractionDigits]="2"
+                         placeholder="0.00" styleClass="w-full" inputStyleClass="w-full !rounded-xl" />
+        </div>
+      </div>
+      <ng-template pTemplate="footer">
+        <button pButton label="Cancel" class="!p-button-text !rounded-xl" (click)="showRentalPrice=false"></button>
+        <button pButton label="Update" icon="pi pi-check" [loading]="saving()"
+                class="!bg-green-600 !border-green-600 !rounded-xl !font-display !font-700" (click)="saveRentalPrice()"></button>
+      </ng-template>
+    </p-dialog>

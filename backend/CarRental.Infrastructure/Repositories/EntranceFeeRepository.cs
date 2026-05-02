@@ -10,16 +10,11 @@ using System.Threading.Tasks;
 
 namespace CarRental.Infrastructure.Repositories
 {
-    public class EntranceFeeRepository : IEntranceFeeRepository
+    public class EntranceFeeRepository:  GenericRepository<EntranceFee>,IEntranceFeeRepository
     {
         private readonly AppDbContext _context;
-        public EntranceFeeRepository(AppDbContext context) => _context = context;
+        public EntranceFeeRepository(AppDbContext context):base(context) => _context = context;
 
-        public async Task<IEnumerable<EntranceFee>> GetByCarPlateAsync(string carPlate) =>
-            await _context.EntranceFees
-                .Where(e => e.CarPlate == carPlate)
-                .OrderByDescending(e => e.TripDate)
-                .ToListAsync();
 
         public async Task<IEnumerable<string>> GetExistingTripNumbersAsync(IEnumerable<string> tripNumbers)
         {
@@ -30,15 +25,8 @@ namespace CarRental.Infrastructure.Repositories
                 .ToListAsync();
         }
 
-        public async Task AddRangeAsync(IEnumerable<EntranceFee> fees)
-        {
-            await _context.EntranceFees.AddRangeAsync(fees);
-            await _context.SaveChangesAsync();
-        }
 
-        public async Task<decimal> GetTotalEntranceFeesByCarPlateAsync(string carPlate) =>
-            await _context.EntranceFees
-                .Where(e => e.CarPlate == carPlate)
-                .SumAsync(e => e.Amount);
+
+
     }
 }

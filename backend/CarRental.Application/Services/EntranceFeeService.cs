@@ -3,6 +3,7 @@ using CarRental.Application.Interfaces;
 using CarRental.Domain.Entities;
 using CarRental.Domain.Interfaces;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 
 
 namespace CarRental.Application.Services
@@ -58,9 +59,9 @@ namespace CarRental.Application.Services
                 // Step 1: Ensure all car records exist BEFORE inserting fees (FK requirement)  (insering cars)
                 foreach (var plate in affectedPlates)
                 {
-                    var existing = await _carRepository.GetByPlateAsync(plate);
+                    var existing = await _carRepository.GetAll().Where(x => x.CarPlate == plate).FirstOrDefaultAsync();
                     if (existing == null)
-                        await _carRepository.AddAsync(new Car { CarPlate = plate, TotalDebt = 0, RentalPrice = 0 });
+                        await _carRepository.AddAsync(new Car { CarPlate = plate, RentalPrice = 0 });
                 }
 
                 // Step 2: Insert entrance fees
@@ -81,22 +82,7 @@ namespace CarRental.Application.Services
 
                 // Step 3: Recalculate TotalDebt for each affected car  ✅ FIXED
                 var carSummaries = new List<CarEntranceFeeSummaryDto>();
-                foreach (var plate in affectedPlates)
-                {
-                    await _debtCalculator.RecalculateCarDebtAsync(plate);
-
-                    //var totalEntranceFees = await _entranceFeeRepository
-                    //    .GetTotalEntranceFeesByCarPlateAsync(plate);
-
-                    //var newAmount = newRows
-                    //    .Where(r => r.CarPlate.Equals(plate, StringComparison.OrdinalIgnoreCase))
-                    //    .Sum(r => r.Amount);
-
-                    //var newCount = newRows
-                    //    .Count(r => r.CarPlate.Equals(plate, StringComparison.OrdinalIgnoreCase));
-
-                    //carSummaries.Add(new CarEntranceFeeSummaryDto(plate, newAmount, totalEntranceFees, newCount));
-                }
+                await _unitOfWork.SaveChangesAsync();
                 await _unitOfWork.CommitAsync();
 
                 return new EntranceFeeImportResultDto(
@@ -116,6 +102,79 @@ namespace CarRental.Application.Services
                 await _unitOfWork.RollbackAsync();
                 throw new InvalidOperationException($"Unexpected error during entrance fee import: {ex.Message}", ex);
             }
+        }
+
+        public async Task MarkAsPaidAsync(string TripNumber)
+        {
+            var fee = await _entranceFeeRepository.GetAll().Where(x=>x.TripNumber ==TripNumber).FirstOrDefaultAsync();
+
+            if (fee == null)
+                throw new Exception("Entrance fee not found.");
+
+            if (fee.IsPaid)
+                return;
+
+            fee.IsPaid = true;
+
+            await _entranceFeeRepository.UpdateAsync(fee);
+            await _unitOfWork.SaveChangesAsync();
+        }
+
+
+        public async Task<TotalEntranceFeesForCar?> GetCarEntranceFeesByPlateAsync(string carPlate)
+        {
+            var fees = await _entranceFeeRepository.GetAll()
+                .Where(x => x.CarPlate == carPlate && x.IsPaid == false)
+                .AsNoTracking()
+                .Select(x => new
+                {
+                    x.Amount,
+                    x.TripNumber
+                })
+                .ToListAsync();
+
+            if (!fees.Any())
+                return null;
+
+            return new TotalEntranceFeesForCar(
+                CarPlate: carPlate,
+                TotalEntranceFees: fees.Sum(x => x.Amount),
+                TripNumbers: fees.Select(x => x.TripNumber)
+            );
+        }
+
+        public async Task<PagedResult<EntranceFeeDetailsDto>> SearchAsync(
+            string? tripNumber,
+            bool? isPaid,
+            int page,
+            int pageSize)
+        {
+            var query = _entranceFeeRepository.GetAll();
+
+            if (!string.IsNullOrWhiteSpace(tripNumber))
+                query = query.Where(x => x.TripNumber.Contains(tripNumber));
+
+            if (isPaid.HasValue)
+                query = query.Where(x => x.IsPaid == isPaid.Value);
+
+            var total = await query.CountAsync();
+
+            var data = await query
+                .OrderByDescending(x => x.ImportedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(x => new EntranceFeeDetailsDto(
+                    x.TripNumber,
+                    x.CarPlate,
+                    x.Amount,
+                    x.IsPaid,
+                    x.TripDate,
+                    x.GateName,
+                    x.Direction
+                ))
+                .ToListAsync();
+
+            return new PagedResult<EntranceFeeDetailsDto>(data, total, page, pageSize);
         }
     }
     }

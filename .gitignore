@@ -110,4 +110,37 @@ $RECYCLE.BIN/
 *.bak
 *.swp
 
+## Angular / Node
 
+# Node modules
+**/node_modules/
+frontend/node_modules/
+
+# Angular build output
+frontend/dist/
+frontend/.angular/
+frontend/.cache/
+
+# Logs
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+
+# Environment files
+frontend/src/environments/environment*.ts
+
+# IDE / misc
+frontend/.editorconfig
+frontend/.vscode/*
+!frontend/.vscode/settings.json
+!frontend/.vscode/extensions.json
+
+# OS
+frontend/.DS_Store
+
+# Testing
+frontend/coverage/
+
+# Angular temp files
+frontend/.sass-cache/
+frontend/.eslintcache

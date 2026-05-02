@@ -61,7 +61,7 @@ namespace CarRental.Infrastructure.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.SetNull);
                 });
-
+            
             migrationBuilder.CreateTable(
                 name: "EntranceFees",
                 columns: table => new

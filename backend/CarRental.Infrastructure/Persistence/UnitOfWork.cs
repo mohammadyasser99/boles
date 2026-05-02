@@ -32,5 +32,10 @@ namespace CarRental.Infrastructure.Persistence
             if (_transaction != null)
                 await _transaction.RollbackAsync();
         }
+
+        public async Task SaveChangesAsync()
+        {
+            await _context.SaveChangesAsync();
+        }
     }
     }

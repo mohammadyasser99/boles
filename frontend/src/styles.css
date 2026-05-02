@@ -1,0 +1,117 @@
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-display: 'Syne', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font-body);
+  background-color: #f8f9fc;
+  color: #1e2235;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── PrimeNG overrides ───────────────────────────────────── */
+.p-datatable .p-datatable-thead > tr > th {
+  background: #f0f2f8 !important;
+  color: #252c82 !important;
+  font-family: var(--font-display) !important;
+  font-weight: 600 !important;
+  font-size: 0.78rem !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.06em !important;
+  border-bottom: 2px solid #e2e6f0 !important;
+  padding: 0.85rem 1rem !important;
+}
+
+.p-datatable .p-datatable-tbody > tr {
+  transition: background 0.15s;
+}
+
+.p-datatable .p-datatable-tbody > tr:hover {
+  background: #f0f4fe !important;
+}
+
+.p-datatable .p-datatable-tbody > tr > td {
+  padding: 0.8rem 1rem !important;
+  border-bottom: 1px solid #f0f2f8 !important;
+  font-size: 0.875rem !important;
+}
+
+.p-card {
+  border-radius: 1rem !important;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.04), 0 4px 16px -4px rgb(0 0 0 / 0.08) !important;
+  border: 1px solid #e2e6f0 !important;
+}
+
+.p-button {
+  font-family: var(--font-display) !important;
+  font-weight: 600 !important;
+  border-radius: 0.6rem !important;
+  letter-spacing: 0.01em !important;
+}
+
+.p-inputtext, .p-password input {
+  border-radius: 0.6rem !important;
+  border-color: #e2e6f0 !important;
+  font-family: var(--font-body) !important;
+}
+
+.p-inputtext:focus, .p-password input:focus {
+  border-color: #4666eb !important;
+  box-shadow: 0 0 0 3px rgb(70 102 235 / 0.15) !important;
+}
+
+.p-tag {
+  border-radius: 2rem !important;
+  font-family: var(--font-display) !important;
+  font-weight: 600 !important;
+  font-size: 0.7rem !important;
+  letter-spacing: 0.04em !important;
+}
+
+.p-dialog {
+  border-radius: 1.25rem !important;
+  overflow: hidden !important;
+}
+
+.p-dialog .p-dialog-header {
+  font-family: var(--font-display) !important;
+  font-weight: 700 !important;
+  background: #f8f9fc !important;
+  border-bottom: 1px solid #e2e6f0 !important;
+  padding: 1.25rem 1.5rem !important;
+}
+
+.p-toast .p-toast-message {
+  border-radius: 0.75rem !important;
+  font-family: var(--font-body) !important;
+}
+
+/* Sidebar active link */
+.nav-link.active {
+  background: linear-gradient(135deg, #4666eb, #3047df);
+  color: white !important;
+  box-shadow: 0 4px 14px -4px rgb(70 102 235 / 0.5);
+}
+
+.nav-link.active .nav-icon {
+  color: white !important;
+}
+
+/* Stat card shimmer */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.stat-card-gradient {
+  background: linear-gradient(135deg, #4666eb 0%, #3047df 50%, #252c82 100%);
+}

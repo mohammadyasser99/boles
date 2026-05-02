@@ -51,20 +51,50 @@ public class FinesController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse<IEnumerable<CarDebtDto>>), 200)]
     public async Task<IActionResult> GetAllDebts()
     {
-        var result = await _fineService.GetAllCarDebtsAsync();
+        var result = await _fineService.GetAllCarFinessAsync();
         return Ok(ApiResponse<IEnumerable<CarDebtDto>>.Ok(result));
     }
 
     /// <summary>Get total debt for a specific car plate.</summary>
-    [HttpGet("debts/{carPlate}")]
-    [ProducesResponseType(typeof(ApiResponse<CarDebtDto>), 200)]
+    [HttpGet("fines/{carPlate}")]
+    [ProducesResponseType(typeof(ApiResponse<TotalFinesForCar>), 200)]
     [ProducesResponseType(typeof(ApiResponse<object>), 404)]
     public async Task<IActionResult> GetDebtByPlate(string carPlate)
     {
-        var result = await _fineService.GetCarDebtByPlateAsync(carPlate);
+        var result = await _fineService.GetCarFinesByPlateAsync(carPlate);
         if (result == null)
             return NotFound(ApiResponse<object>.Fail($"Car '{carPlate}' not found."));
 
-        return Ok(ApiResponse<CarDebtDto>.Ok(result));
+        return Ok(ApiResponse<TotalFinesForCar>.Ok(result));
+    }
+
+    /// <summary>Mark a fine as paid.</summary>
+    [HttpPatch("{ViolationNumber}/pay")]
+    [ProducesResponseType(typeof(ApiResponse<object>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> MarkAsPaid(string ViolationNumber)
+    {
+        try
+        {
+            await _fineService.MarkAsPaidAsync(ViolationNumber);
+
+            return Ok(ApiResponse<object>.Ok(null, "Fine marked as paid."));
+        }
+        catch (Exception ex)
+        {
+            return NotFound(ApiResponse<object>.Fail(ex.Message));
+        }
+    }
+
+    [HttpGet("search")]
+    [ProducesResponseType(typeof(ApiResponse<PagedResult<FineDetailsDto>>), 200)]
+    public async Task<IActionResult> Search(
+    string? violationNumber,
+    bool? isPaid,
+    int page = 1,
+    int pageSize = 10)
+    {
+        var result = await _fineService.SearchAsync(violationNumber, isPaid, page, pageSize);
+        return Ok(ApiResponse<PagedResult<FineDetailsDto>>.Ok(result));
     }
 }

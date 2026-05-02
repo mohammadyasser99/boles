@@ -1,5 +1,6 @@
 ﻿using CarRental.Application.Interfaces;
 using CarRental.Domain.Interfaces;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -24,17 +25,6 @@ namespace CarRental.Application.Services
             _entranceFeeRepository = entranceFeeRepository;
         }
 
-        public async Task RecalculateCarDebtAsync(string carPlate)
-        {
-            var car = await _carRepository.GetByPlateAsync(carPlate);
-            if (car == null) return;
 
-            var totalFines = await _fineRepository.GetTotalFinesByCarPlateAsync(carPlate);
-            var totalEntranceFees = await _entranceFeeRepository.GetTotalEntranceFeesByCarPlateAsync(carPlate);
-
-            // TotalDebt = Fines + Entrance Fees + Monthly Rental Price
-            car.TotalDebt = (totalFines + totalEntranceFees + (car.RentalPrice ?? 0));
-            await _carRepository.UpdateAsync(car);
-        }
     }
     }

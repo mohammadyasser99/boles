@@ -3,6 +3,7 @@ using CarRental.Application.Interfaces;
 using CarRental.Domain.Entities;
 using CarRental.Domain.Enums;
 using CarRental.Domain.Interfaces;
+using Microsoft.EntityFrameworkCore;
 
 namespace CarRental.Application.Services;
 
@@ -17,8 +18,7 @@ public class AdminService : IAdminService
 
     public async Task<IEnumerable<AdminDto>> GetAllAdminsAsync()
     {
-        var admins = await _adminRepository.GetAllAsync();
-        return admins.Select(a => new AdminDto(a.Id, a.Name, a.Username, a.Role.ToString()));
+        return await _adminRepository.GetAll().Select(a => new AdminDto(a.Id, a.Name, a.Username, a.Role.ToString())).AsNoTracking().ToListAsync(); 
     }
 
     public async Task<AdminDto?> GetAdminByIdAsync(Guid id)
@@ -32,7 +32,7 @@ public class AdminService : IAdminService
         if (!Enum.TryParse<AdminRole>(dto.Role, ignoreCase: true, out var role))
             throw new ArgumentException($"Invalid role '{dto.Role}'. Valid values: Admin, SuperAdmin.");
 
-        var existing = await _adminRepository.GetByUsernameAsync(dto.Username);
+        var existing = await _adminRepository.GetAll().Where(x=>x.Username==dto.Username).AsNoTracking().FirstOrDefaultAsync();
         if (existing != null)
             throw new InvalidOperationException($"Username '{dto.Username}' is already taken.");
 
@@ -46,6 +46,7 @@ public class AdminService : IAdminService
         };
 
         await _adminRepository.AddAsync(admin);
+        await _adminRepository.SaveChanges();
         return new AdminDto(admin.Id, admin.Name, admin.Username, admin.Role.ToString());
     }
 
@@ -54,5 +55,6 @@ public class AdminService : IAdminService
         _ = await _adminRepository.GetByIdAsync(id)
             ?? throw new KeyNotFoundException($"Admin '{id}' not found.");
         await _adminRepository.DeleteAsync(id);
+        await _adminRepository.SaveChanges();
     }
 }

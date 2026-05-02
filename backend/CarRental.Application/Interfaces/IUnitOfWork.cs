@@ -11,5 +11,7 @@ namespace CarRental.Application.Interfaces
         Task<IAsyncDisposable> BeginTransactionAsync();
         Task CommitAsync();
         Task RollbackAsync();
+        Task SaveChangesAsync();
+
     }
 }

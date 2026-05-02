@@ -1,0 +1,96 @@
+
+    <p-toast />
+    <div class="flex h-screen overflow-hidden bg-surface-50">
+
+      <!-- Sidebar -->
+      <aside class="w-64 flex-shrink-0 flex flex-col bg-white border-r border-surface-200"
+             [class.hidden]="!sidebarOpen()" [class.flex]="sidebarOpen()">
+
+        <!-- Logo -->
+        <div class="px-6 py-5 border-b border-surface-100">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl stat-card-gradient flex items-center justify-center shadow-glow">
+              <i class="pi pi-car text-white text-sm"></i>
+            </div>
+            <div>
+              <p class="font-display font-800 text-surface-800 text-sm leading-tight">Car Rental</p>
+              <p class="text-xs text-brand-500 font-mono font-medium">Admin Portal</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Nav -->
+        <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+          <p class="text-xs font-display font-600 text-surface-200 uppercase tracking-widest px-3 mb-3">Main</p>
+
+          <a routerLink="/dashboard" routerLinkActive="active" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-surface-600 hover:bg-surface-50 transition-all duration-200 cursor-pointer no-underline">
+            <i class="nav-icon pi pi-th-large text-brand-400 w-4 text-center"></i>
+            <span class="font-body font-medium text-sm">Dashboard</span>
+          </a>
+
+          <a routerLink="/cars" routerLinkActive="active" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-surface-600 hover:bg-surface-50 transition-all duration-200 cursor-pointer no-underline">
+            <i class="nav-icon pi pi-car text-brand-400 w-4 text-center"></i>
+            <span class="font-body font-medium text-sm">Cars</span>
+          </a>
+
+          <a routerLink="/users" routerLinkActive="active" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-surface-600 hover:bg-surface-50 transition-all duration-200 cursor-pointer no-underline">
+            <i class="nav-icon pi pi-users text-brand-400 w-4 text-center"></i>
+            <span class="font-body font-medium text-sm">Users</span>
+          </a>
+
+          <p class="text-xs font-display font-600 text-surface-200 uppercase tracking-widest px-3 mb-3 mt-5">Finance</p>
+
+          <a routerLink="/fines" routerLinkActive="active" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-surface-600 hover:bg-surface-50 transition-all duration-200 cursor-pointer no-underline">
+            <i class="nav-icon pi pi-file-excel text-brand-400 w-4 text-center"></i>
+            <span class="font-body font-medium text-sm">Traffic Fines</span>
+          </a>
+
+          <a routerLink="/entrance-fees" routerLinkActive="active" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-surface-600 hover:bg-surface-50 transition-all duration-200 cursor-pointer no-underline">
+            <i class="nav-icon pi pi-map-marker text-brand-400 w-4 text-center"></i>
+            <span class="font-body font-medium text-sm">Entrance Fees</span>
+          </a>
+
+          @if (auth.isSuperAdmin()) {
+            <p class="text-xs font-display font-600 text-surface-200 uppercase tracking-widest px-3 mb-3 mt-5">System</p>
+            <a routerLink="/admins" routerLinkActive="active" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-surface-600 hover:bg-surface-50 transition-all duration-200 cursor-pointer no-underline">
+              <i class="nav-icon pi pi-shield text-brand-400 w-4 text-center"></i>
+              <span class="font-body font-medium text-sm">Admins</span>
+            </a>
+          }
+        </nav>
+
+        <!-- Admin profile -->
+        <div class="px-4 py-4 border-t border-surface-100">
+          <div class="flex items-center gap-3">
+            <p-avatar [label]="auth.getAdminName().charAt(0).toUpperCase()" styleClass="bg-brand-100 text-brand-700 font-display font-700" shape="circle" size="normal" />
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-display font-600 text-surface-800 truncate">{{ auth.getAdminName() }}</p>
+              <p class="text-xs text-surface-400 font-mono">{{ auth.getAdminRole() }}</p>
+            </div>
+            <button (click)="auth.logout()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 text-surface-400 hover:text-red-500 transition-colors">
+              <i class="pi pi-sign-out text-sm"></i>
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Main content -->
+      <div class="flex-1 flex flex-col overflow-hidden">
+        <!-- Top bar -->
+        <header class="h-14 bg-white border-b border-surface-100 flex items-center px-6 gap-4 flex-shrink-0">
+          <button (click)="sidebarOpen.set(!sidebarOpen())" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-100 text-surface-500 transition-colors lg:hidden">
+            <i class="pi pi-bars"></i>
+          </button>
+          <div class="flex-1"></div>
+          <div class="flex items-center gap-2 text-sm text-surface-400 font-mono">
+            <span class="w-2 h-2 bg-green-400 rounded-full inline-block"></span>
+            Connected
+          </div>
+        </header>
+
+        <!-- Page content -->
+        <main class="flex-1 overflow-y-auto p-6">
+          <router-outlet />
+        </main>
+      </div>
+    </div>

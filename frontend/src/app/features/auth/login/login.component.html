@@ -1,0 +1,103 @@
+ <div class="min-h-screen flex bg-surface-950">
+
+      <!-- Left decorative panel -->
+      <div class="hidden lg:flex w-1/2 flex-col justify-between p-14 relative overflow-hidden"
+           style="background: linear-gradient(145deg, #1a1d50 0%, #252c82 50%, #3047df 100%)">
+        <div class="absolute inset-0 opacity-10"
+             style="background-image: radial-gradient(circle at 20% 50%, white 1px, transparent 1px),
+                                      radial-gradient(circle at 80% 20%, white 1px, transparent 1px);
+                    background-size: 60px 60px;"></div>
+
+        <div class="relative z-10">
+          <div class="flex items-center gap-3 mb-2">
+            <div class="w-10 h-10 bg-white/10 backdrop-blur rounded-xl flex items-center justify-center">
+              <i class="pi pi-car text-white"></i>
+            </div>
+            <span class="font-display font-700 text-white text-lg tracking-tight">Car Rental</span>
+          </div>
+        </div>
+
+        <div class="relative z-10 space-y-6">
+          <div>
+            <h1 class="font-display font-800 text-white text-5xl leading-tight">
+              Fleet &<br>Finance<br>
+              <span class="text-blue-300">Control.</span>
+            </h1>
+            <p class="text-blue-200/70 mt-4 font-body text-base leading-relaxed max-w-xs">
+              Manage your rental fleet, track fines, entrance fees and outstanding debts — all in one place.
+            </p>
+          </div>
+
+          <div class="flex gap-8">
+            <div>
+              <p class="font-display font-800 text-white text-2xl">فينات</p>
+              <p class="text-blue-200/60 text-xs font-mono uppercase tracking-widest mt-1">Traffic Fines</p>
+            </div>
+            <div class="w-px bg-white/10"></div>
+            <div>
+              <p class="font-display font-800 text-white text-2xl">رحلات</p>
+              <p class="text-blue-200/60 text-xs font-mono uppercase tracking-widest mt-1">City Tolls</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="relative z-10">
+          <p class="text-blue-200/40 text-xs font-mono">v1.0 · Admin Portal</p>
+        </div>
+      </div>
+
+      <!-- Right login form -->
+      <div class="flex-1 flex items-center justify-center p-8 bg-surface-950">
+        <div class="w-full max-w-sm">
+
+          <div class="mb-10">
+            <h2 class="font-display font-800 text-white text-3xl">Welcome back</h2>
+            <p class="text-surface-400 font-body mt-2 text-sm">Sign in to your admin account</p>
+          </div>
+
+          @if (errorMsg()) {
+            <div class="mb-5 px-4 py-3 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-3">
+              <i class="pi pi-exclamation-circle text-red-400 text-sm"></i>
+              <p class="text-red-300 text-sm font-body">{{ errorMsg() }}</p>
+            </div>
+          }
+
+          <form (ngSubmit)="onLogin()" class="space-y-4">
+            <div class="space-y-1.5">
+              <label class="text-xs font-display font-600 text-surface-400 uppercase tracking-widest">Username</label>
+              <div class="relative">
+                <i class="pi pi-user absolute left-3.5 top-1/2 -translate-y-1/2 text-surface-500 text-sm z-10"></i>
+                <input pInputText [(ngModel)]="username" name="username" placeholder="Enter username"
+                       class="w-full !pl-10 !bg-surface-900 !border-surface-800 !text-white !rounded-xl focus:!border-brand-500"
+                       style="background:#1e2235; border-color:#2a2f47; color:white;" />
+              </div>
+            </div>
+
+            <div class="space-y-1.5">
+              <label class="text-xs font-display font-600 text-surface-400 uppercase tracking-widest">Password</label>
+              <div class="relative">
+                <i class="pi pi-lock absolute left-3.5 top-1/2 -translate-y-1/2 text-surface-500 text-sm z-10 pointer-events-none"></i>
+                <p-password [(ngModel)]="password" name="password" placeholder="Enter password"
+                            [feedback]="false" [toggleMask]="true" styleClass="w-full"
+                            inputStyleClass="w-full !pl-10 !bg-surface-900 !border-surface-800 !text-white !rounded-xl"
+                            [inputStyle]="{'background':'#1e2235','border-color':'#2a2f47','color':'white','padding-left':'2.5rem'}" />
+              </div>
+            </div>
+
+            <button type="submit" [disabled]="loading()"
+                    class="w-full mt-6 py-3 rounded-xl font-display font-700 text-white text-sm tracking-wide transition-all duration-200 disabled:opacity-60"
+                    style="background: linear-gradient(135deg, #4666eb, #3047df); box-shadow: 0 8px 24px -6px rgba(70,102,235,0.5)">
+              @if (loading()) {
+                <i class="pi pi-spin pi-spinner mr-2"></i>Signing in...
+              } @else {
+                Sign In <i class="pi pi-arrow-right ml-2"></i>
+              }
+            </button>
+          </form>
+
+          <p class="text-center text-surface-600 text-xs font-mono mt-8">
+            Car Rental Admin Portal · Protected
+          </p>
+        </div>
+      </div>
+    </div>

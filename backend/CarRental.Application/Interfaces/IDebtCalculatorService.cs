@@ -8,6 +8,5 @@ namespace CarRental.Application.Interfaces
 {
     public interface IDebtCalculatorService
     {
-        Task RecalculateCarDebtAsync(string carPlate);
     }
 }

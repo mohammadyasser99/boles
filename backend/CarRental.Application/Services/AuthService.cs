@@ -1,6 +1,7 @@
 using CarRental.Application.DTOs;
 using CarRental.Application.Interfaces;
 using CarRental.Domain.Interfaces;
+using Microsoft.EntityFrameworkCore;
 
 namespace CarRental.Application.Services;
 
@@ -17,7 +18,7 @@ public class AuthService : IAuthService
 
     public async Task<LoginResponseDto> LoginAsync(LoginRequestDto request)
     {
-        var admin = await _adminRepository.GetByUsernameAsync(request.Username)
+        var admin = await _adminRepository.GetAll().Where(x => x.Username == x.Username).FirstAsync()
             ?? throw new UnauthorizedAccessException("Invalid username or password.");
 
         if (!BCrypt.Net.BCrypt.Verify(request.Password, admin.PasswordHash))
@@ -29,7 +30,7 @@ public class AuthService : IAuthService
         admin.RefreshToken = refreshToken;
         admin.RefreshTokenExpiry = DateTime.UtcNow.AddDays(7);
         await _adminRepository.UpdateAsync(admin);
-
+        await _adminRepository.SaveChanges();
         return new LoginResponseDto(
             accessToken,
             refreshToken,
@@ -42,7 +43,7 @@ public class AuthService : IAuthService
 
     public async Task<RefreshTokenResponseDto> RefreshTokenAsync(RefreshTokenRequestDto request)
     {
-        var admin = await _adminRepository.GetByRefreshTokenAsync(request.RefreshToken)
+        var admin = await _adminRepository.GetAll().Where(x=>x.RefreshToken ==request.RefreshToken).FirstAsync()
             ?? throw new UnauthorizedAccessException("Invalid or expired refresh token.");
 
         if (admin.RefreshTokenExpiry < DateTime.UtcNow)
@@ -54,7 +55,7 @@ public class AuthService : IAuthService
         admin.RefreshToken = newRefreshToken;
         admin.RefreshTokenExpiry = DateTime.UtcNow.AddDays(7);
         await _adminRepository.UpdateAsync(admin);
-
+        await _adminRepository.SaveChanges();
         return new RefreshTokenResponseDto(
             newAccessToken,
             newRefreshToken,

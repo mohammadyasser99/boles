@@ -19,4 +19,21 @@ namespace CarRental.Application.DTOs
         decimal TotalEntranceFees,
         int NewTripsAdded
     );
+
+    public record TotalEntranceFeesForCar(
+    string CarPlate,
+    decimal TotalEntranceFees,
+    IEnumerable<string> TripNumbers
+);
+
+    public record EntranceFeeDetailsDto(
+    string TripNumber,
+    string CarPlate,
+    decimal Amount,
+    bool IsPaid,
+    DateTime? TripDate,
+    string? GateName,
+    string? Direction
+);
+
 }

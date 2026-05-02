@@ -18,9 +18,14 @@ public static class DependencyInjection
     {
         // ── EF Core / SQL Server ─────────────────────────────────────────────
         services.AddDbContext<AppDbContext>(options =>
+        {
             options.UseSqlServer(
                 configuration.GetConnectionString("DefaultConnection"),
-                b => b.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName)));
+                b => b.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName));
+
+            options.UseLazyLoadingProxies();
+        });
+
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         // ── Repositories ─────────────────────────────────────────────────────
         services.AddScoped<IAdminRepository, AdminRepository>();
@@ -45,7 +50,12 @@ public static class DependencyInjection
 
         services.AddScoped<IDebtCalculatorService, DebtCalculatorService>();
 
+        services.AddScoped<IUserDocumentRepository, UserDocumentRepository>();
+        services.AddScoped<IFileStorageService, FileStorageService>();
+        services.AddScoped<IUserDocumentService, UserDocumentService>();
 
+        services.AddScoped<IWhatsAppSenderService, TwilioWhatsAppSenderService>();
+        services.AddScoped<IWhatsAppService, WhatsAppService>();
 
 
         return services;

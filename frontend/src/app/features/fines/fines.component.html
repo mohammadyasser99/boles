@@ -1,0 +1,93 @@
+<p-toast />
+
+<div class="space-y-5">
+
+  <!-- Upload -->
+  <div class="bg-white p-5 rounded-xl border">
+    <input type="file" (change)="onFileSelect($event)" />
+    <button (click)="uploadFines()" [disabled]="uploading()">
+      Upload
+    </button>
+  </div>
+
+  <!-- Filters -->
+  <div class="flex gap-3">
+
+    <input
+      type="text"
+      placeholder="Violation Number"
+      [value]="searchViolationNumber()"
+      (input)="searchViolationNumber.set($any($event.target).value)"
+      class="border p-2 rounded w-full"
+    />
+
+    <select
+      [value]="searchIsPaid() === null ? '' : searchIsPaid()"
+      (change)="searchIsPaid.set($any($event.target).value === '' ? null : $any($event.target).value === 'true')"
+      class="border p-2 rounded"
+    >
+      <option value="">All</option>
+      <option value="false">Unpaid</option>
+      <option value="true">Paid</option>
+    </select>
+
+    <button (click)="search()">Search</button>
+    <button (click)="resetFilters()">Reset</button>
+
+  </div>
+
+  <!-- TABLE -->
+  <p-table
+    [value]="fines()"
+    [lazy]="true"
+    [paginator]="true"
+    [rows]="pageSize"
+    [totalRecords]="totalRecords()"
+    (onLazyLoad)="onPageChange($event)"
+    [loading]="loadingFines()"
+  >
+
+    <ng-template pTemplate="header">
+      <tr>
+        <th>Violation</th>
+        <th>Car</th>
+        <th>Amount</th>
+        <th>Status</th>
+        <th>Action</th>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="body" let-fine>
+      <tr>
+        <td>{{ fine.violationNumber }}</td>
+        <td>{{ fine.carPlate }}</td>
+        <td>{{ fine.amount }}</td>
+
+        <td>
+          <span *ngIf="fine.isPaid" style="color: green;">Paid</span>
+          <span *ngIf="!fine.isPaid" style="color: red;">Unpaid</span>
+        </td>
+
+        <td>
+          <button
+            *ngIf="!fine.isPaid"
+            (click)="markFineAsPaid(fine.violationNumber)"
+            [disabled]="processingFine() === fine.violationNumber"
+          >
+            {{ processingFine() === fine.violationNumber ? '...' : 'Mark Paid' }}
+          </button>
+
+          <span *ngIf="fine.isPaid">✔</span>
+        </td>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="emptymessage">
+      <tr>
+        <td colspan="5">No data</td>
+      </tr>
+    </ng-template>
+
+  </p-table>
+
+</div>

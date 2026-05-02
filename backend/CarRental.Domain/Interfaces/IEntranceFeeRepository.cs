@@ -7,11 +7,8 @@ using System.Threading.Tasks;
 
 namespace CarRental.Domain.Interfaces
 {
-    public interface IEntranceFeeRepository
+    public interface IEntranceFeeRepository : IGenericRepository<EntranceFee>
     {
-        Task<IEnumerable<EntranceFee>> GetByCarPlateAsync(string carPlate);
         Task<IEnumerable<string>> GetExistingTripNumbersAsync(IEnumerable<string> tripNumbers);
-        Task AddRangeAsync(IEnumerable<EntranceFee> fees);
-        Task<decimal> GetTotalEntranceFeesByCarPlateAsync(string carPlate);
     }
 }

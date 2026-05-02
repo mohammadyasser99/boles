@@ -7,5 +7,14 @@ namespace CarRental.Application.Interfaces
     public interface IEntranceFeeService
     {
         Task<EntranceFeeImportResultDto> ImportEntranceFeesFromExcelAsync(IFormFile file);
+        Task MarkAsPaidAsync(string ViolationNumber);
+        Task<TotalEntranceFeesForCar?> GetCarEntranceFeesByPlateAsync(string carPlate);
+        Task<PagedResult<EntranceFeeDetailsDto>> SearchAsync(
+    string? tripNumber,
+    bool? isPaid,
+    int page,
+    int pageSize);
+
+
     }
 }

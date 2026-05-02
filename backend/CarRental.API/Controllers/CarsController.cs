@@ -8,12 +8,16 @@ namespace CarRental.API.Controllers;
 
 [ApiController]
 [Route("api/cars")]
-[Authorize]
+//[Authorize]
 public class CarsController : ControllerBase
 {
     private readonly ICarService _carService;
+    private readonly IWhatsAppService _whisService;
 
-    public CarsController(ICarService carService) => _carService = carService;
+    public CarsController(ICarService carService, IWhatsAppService whatsAppService) {
+        _carService = carService; _whisService = whatsAppService;
+
+    }
 
     /// <summary>Get all cars.</summary>
     [HttpGet]
@@ -90,6 +94,28 @@ public class CarsController : ControllerBase
         }
     }
 
+    /// <summary>Send WhatsApp debt reminder for a specific car plate.</summary>
+    [HttpPost("{carPlate}/send-debt-reminder")]
+    [ProducesResponseType(typeof(ApiResponse<WhatsAppMessageResultDto>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    public async Task<IActionResult> SendDebtReminder(string carPlate)
+    {
+        try
+        {
+            var result = await _whisService.SendDebtReminderAsync(carPlate);
+            return Ok(ApiResponse<WhatsAppMessageResultDto>.Ok(result, "Debt reminder sent successfully."));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ApiResponse<object>.Fail(ex.Message));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ApiResponse<object>.Fail(ex.Message));
+        }
+    }
+
     [HttpPatch("{carPlate}/rental-price")]
     public async Task<IActionResult> SetRentalPrice(string carPlate, [FromBody] decimal rentalPrice)
     {
@@ -105,4 +131,7 @@ public class CarsController : ControllerBase
     }
 
 
+
 }
+
+

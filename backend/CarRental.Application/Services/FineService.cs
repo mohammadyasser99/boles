@@ -3,6 +3,7 @@ using CarRental.Application.Interfaces;
 using CarRental.Domain.Entities;
 using CarRental.Domain.Interfaces;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 
 namespace CarRental.Application.Services;
 
@@ -58,9 +59,9 @@ public class FineService : IFineService
             var affectedPlates = newRows.Select(r => r.CarPlate).Distinct().ToList();
             foreach (var plate in affectedPlates)
             {
-                var existing = await _carRepository.GetByPlateAsync(plate);
+                var existing = await _carRepository.GetAll().Where(x => x.CarPlate == plate).FirstOrDefaultAsync();
                 if (existing == null)
-                    await _carRepository.AddAsync(new Car { CarPlate = plate, TotalDebt = 0 });
+                    await _carRepository.AddAsync(new Car { CarPlate = plate});
             }
 
             // Step 2: Insert fines
@@ -82,30 +83,13 @@ public class FineService : IFineService
             if (finesToAdd.Any())
                 await _fineRepository.AddRangeAsync(finesToAdd);
 
-            // Step 3: Recalculate TotalDebt per car
-            // Step 3: Recalculate TotalDebt for each affected car  ✅ FIXED
-            foreach (var plate in affectedPlates)
-            {
-                await _debtCalculator.RecalculateCarDebtAsync(plate);
-
-                //var totalFines = await _fineRepository.GetTotalFinesByCarPlateAsync(plate);
-
-                //var newAmount = newRows
-                //    .Where(r => r.CarPlate.Equals(plate, StringComparison.OrdinalIgnoreCase))
-                //    .Sum(r => r.Amount);
-
-                //var newCount = newRows
-                //    .Count(r => r.CarPlate.Equals(plate, StringComparison.OrdinalIgnoreCase));
-
-                //carSummaries.Add(new CarFinesSummaryDto(plate, newAmount, totalFines, newCount));
-            }
+            await _fineRepository.SaveChanges();
             await _unitOfWork.CommitAsync();
 
             return new FineImportResultDto(
                 TotalRowsProcessed: rows.Count,
                 NewFinesAdded: finesToAdd.Count,
                 DuplicatesSkipped: rows.Count - finesToAdd.Count
-            //    CarSummaries: carSummaries
             );
         }
         catch (InvalidOperationException ex)
@@ -120,29 +104,81 @@ public class FineService : IFineService
             throw new InvalidOperationException($"Unexpected error during import: {ex.Message}", ex);
         }
     }
-    public async Task<IEnumerable<CarDebtDto>> GetAllCarDebtsAsync()
+    public async Task<IEnumerable<CarDebtDto>> GetAllCarFinessAsync()
     {
-        var cars = await _carRepository.GetAllAsync();
-        return cars.Select(c => new CarDebtDto(
+        return await _carRepository.GetAll().Select(c => new CarDebtDto(
             c.CarPlate,
-            c.TotalDebt,
-            c.User?.Name,
-            c.User?.Email,
-            c.User?.PhoneNumber
-        ));
+            c.User.Name,
+            c.User.Email,
+            c.User.PhoneNumber
+        )).AsNoTracking().ToListAsync();
     }
 
-    public async Task<CarDebtDto?> GetCarDebtByPlateAsync(string carPlate)
+    public async Task<TotalFinesForCar?> GetCarFinesByPlateAsync(string carPlate)
     {
-        var car = await _carRepository.GetByPlateAsync(carPlate);
-        if (car == null) return null;
+        var fines = await _fineRepository.GetAll()
+            .Where(x => x.CarPlate == carPlate && !x.IsPaid)
+            .AsNoTracking()
+            .Select(x => new
+            {
+                x.Amount,
+                x.ViolationNumber
+            })
+            .ToListAsync();
 
-        return new CarDebtDto(
-            car.CarPlate,
-            car.TotalDebt,
-            car.User?.Name,
-            car.User?.Email,
-            car.User?.PhoneNumber
+        return new TotalFinesForCar(
+            carPlate,
+            fines.Sum(x => x.Amount),
+            fines.Select(x => x.ViolationNumber)
         );
     }
+
+    public async Task MarkAsPaidAsync(string ViolationNumber)
+    {
+        var fine = await _fineRepository.GetAll().Where(x=>x.ViolationNumber==ViolationNumber).FirstOrDefaultAsync();
+
+        if (fine == null)
+            throw new Exception("Fine not found.");
+
+        if (fine.IsPaid)
+            return;
+
+        fine.IsPaid = true;
+
+        await _fineRepository.UpdateAsync(fine);
+        await _unitOfWork.SaveChangesAsync();
+    }
+
+    public async Task<PagedResult<FineDetailsDto>> SearchAsync(
+    string? violationNumber,
+    bool? isPaid,
+    int page,
+    int pageSize)
+    {
+        var query = _fineRepository.GetAll();
+
+        if (!string.IsNullOrWhiteSpace(violationNumber))
+            query = query.Where(x => x.ViolationNumber.Contains(violationNumber));
+
+        if (isPaid.HasValue)
+            query = query.Where(x => x.IsPaid == isPaid.Value);
+
+        var total = await query.CountAsync();
+
+        var data = await query
+            .OrderByDescending(x => x.ImportedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(x => new FineDetailsDto(
+                x.ViolationNumber,
+                x.CarPlate,
+                x.Amount,
+                x.IsPaid,
+                x.ViolationDate
+            ))
+            .ToListAsync();
+
+        return new PagedResult<FineDetailsDto>(data, total, page, pageSize);
+    }
+
 }

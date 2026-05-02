@@ -1,0 +1,90 @@
+  <p-toast />
+    <p-confirmDialog />
+
+    <div class="space-y-5">
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="font-display font-800 text-surface-800 text-2xl">Admins</h1>
+          <p class="text-surface-400 text-sm mt-1">Manage admin accounts — SuperAdmin only</p>
+        </div>
+        <button (click)="openCreate()" pButton label="Add Admin" icon="pi pi-shield"
+                class="!bg-brand-600 !border-brand-600 !font-display !font-700 !rounded-xl shadow-glow"></button>
+      </div>
+
+      <!-- Warning banner -->
+      <div class="flex items-center gap-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl">
+        <i class="pi pi-lock text-amber-500"></i>
+        <p class="text-amber-700 text-sm font-body">This section is restricted to SuperAdmin accounts only.</p>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow-card border border-surface-200 overflow-hidden">
+        <p-table [value]="admins()" [loading]="loading()" styleClass="border-0">
+          <ng-template pTemplate="header">
+            <tr>
+              <th>Admin</th>
+              <th>Username</th>
+              <th>Role</th>
+              <th class="text-right">Actions</th>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="body" let-admin>
+            <tr>
+              <td>
+                <div class="flex items-center gap-3">
+                  <p-avatar [label]="admin.name.charAt(0).toUpperCase()" shape="circle"
+                            styleClass="!bg-brand-100 !text-brand-700 !font-display !font-700" />
+                  <span class="font-display font-600 text-surface-800 text-sm">{{ admin.name }}</span>
+                </div>
+              </td>
+              <td><span class="font-mono text-sm text-surface-600 bg-surface-50 px-2.5 py-1 rounded-lg">{{ admin.username }}</span></td>
+              <td>
+                @if (admin.role === 'SuperAdmin') {
+                  <p-tag value="SuperAdmin" [style]="{'background':'linear-gradient(135deg,#4666eb,#252c82)','color':'white'}" />
+                } @else {
+                  <p-tag value="Admin" severity="info" />
+                }
+              </td>
+              <td>
+                <div class="flex justify-end">
+                  <button pButton icon="pi pi-trash"
+                          class="!p-button-text !p-button-sm !text-red-400 !rounded-lg"
+                          (click)="deleteAdmin(admin)"></button>
+                </div>
+              </td>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="emptymessage">
+            <tr><td colspan="4" class="text-center text-surface-400 py-12">No admins found.</td></tr>
+          </ng-template>
+        </p-table>
+      </div>
+    </div>
+
+    <!-- Create Admin Dialog -->
+    <p-dialog header="Create Admin Account" [(visible)]="showDialog" [modal]="true" [style]="{width:'440px'}">
+      <div class="space-y-4 pt-2">
+        <div class="space-y-1.5">
+          <label class="text-xs font-display font-600 text-surface-500 uppercase tracking-wider">Full Name *</label>
+          <input pInputText [(ngModel)]="form.name" placeholder="John Admin" class="w-full !rounded-xl" />
+        </div>
+        <div class="space-y-1.5">
+          <label class="text-xs font-display font-600 text-surface-500 uppercase tracking-wider">Username *</label>
+          <input pInputText [(ngModel)]="form.username" placeholder="johnadmin" class="w-full !rounded-xl" />
+        </div>
+        <div class="space-y-1.5">
+          <label class="text-xs font-display font-600 text-surface-500 uppercase tracking-wider">Password *</label>
+          <p-password [(ngModel)]="form.password" placeholder="Min 8 characters" [toggleMask]="true"
+                      styleClass="w-full" inputStyleClass="w-full !rounded-xl" />
+        </div>
+        <div class="space-y-1.5">
+          <label class="text-xs font-display font-600 text-surface-500 uppercase tracking-wider">Role *</label>
+          <p-dropdown [options]="roleOptions" [(ngModel)]="form.role" optionLabel="label" optionValue="value"
+                      placeholder="Select role" styleClass="w-full" />
+        </div>
+      </div>
+      <ng-template pTemplate="footer">
+        <button pButton label="Cancel" class="!p-button-text !rounded-xl" (click)="showDialog=false"></button>
+        <button pButton label="Create Admin" icon="pi pi-check" [loading]="saving()"
+                class="!bg-brand-600 !border-brand-600 !rounded-xl !font-display !font-700" (click)="createAdmin()"></button>
+      </ng-template>
+    </p-dialog>
