@@ -6,7 +6,10 @@ import {
   ApiResponse, User, CreateUserRequest,
   Car, CreateCarRequest, AssignCarRequest,
   Admin, CreateAdminRequest,
-  FineImportResult, EntranceFeeImportResult, CarDebt
+  FineImportResult, EntranceFeeImportResult, CarDebt,
+  PagedResult, CarSummaryDto,
+  MonthlyRentalPaymentDto, CreateMonthlyRentalPaymentRequestDto, UpdateMonthlyRentalPaymentRequestDto,
+  SystemMonthlyRowDto
 } from '../models';
 
 // ── User Service ──────────────────────────────────────────────────────────────
@@ -17,9 +20,13 @@ export class UserService {
 
   getAll(): Observable<ApiResponse<User[]>> { return this.http.get<ApiResponse<User[]>>(this.base); }
   getById(id: string): Observable<ApiResponse<User>> { return this.http.get<ApiResponse<User>>(`${this.base}/${id}`); }
-  create(req: CreateUserRequest): Observable<ApiResponse<User>> { return this.http.post<ApiResponse<User>>(this.base, req); }
-  update(id: string, req: CreateUserRequest): Observable<ApiResponse<void>> { return this.http.put<ApiResponse<void>>(`${this.base}/${id}`, req); }
-  delete(id: string): Observable<ApiResponse<void>> { return this.http.delete<ApiResponse<void>>(`${this.base}/${id}`); }
+  getUserWithCar(userId: string): Observable<ApiResponse<any>> { return this.http.get<ApiResponse<any>>(`${this.base}/GetUserWithCar/${userId}`); }
+  create(req: FormData): Observable<ApiResponse<User>> { return this.http.post<ApiResponse<User>>(`${this.base}/createUser`, req); }
+  createwithcar(req: any): Observable<ApiResponse<User>> { return this.http.post<ApiResponse<User>>(`${this.base}/CreateUserWithCar`, req); }
+  updateCarAndUser(req: any): Observable<ApiResponse<User>> { return this.http.post<ApiResponse<User>>(`${this.base}/UpdateCarAndUser`, req); }
+update(id: string, formData: FormData): Observable<ApiResponse<User>> {
+  return this.http.put<ApiResponse<User>>(`${this.base}/${id}/update`, formData);
+}  delete(id: string): Observable<ApiResponse<void>> { return this.http.delete<ApiResponse<void>>(`${this.base}/${id}`); }
 }
 
 // ── Car Service ───────────────────────────────────────────────────────────────
@@ -29,6 +36,12 @@ export class CarService {
   private base = `${environment.apiUrl}/cars`;
 
   getAll(): Observable<ApiResponse<Car[]>> { return this.http.get<ApiResponse<Car[]>>(this.base); }
+getAllWithDebs(page: number, pageSize: number) {
+  return this.http.get<ApiResponse<PagedResult<Car>>>(
+    `${this.base}/cars-with-debs?page=${page}&pageSize=${pageSize}`
+  );
+}
+  getCarPaymentReport(plate: string): Observable<ApiResponse<CarSummaryDto>> { return this.http.get<ApiResponse<CarSummaryDto>>(`${this.base}/car-payment-report/${plate}`); }
   getByPlate(plate: string): Observable<ApiResponse<Car>> { return this.http.get<ApiResponse<Car>>(`${this.base}/${plate}`); }
   create(req: CreateCarRequest): Observable<ApiResponse<Car>> { return this.http.post<ApiResponse<Car>>(this.base, req); }
   assignToUser(req: AssignCarRequest): Observable<ApiResponse<void>> { return this.http.post<ApiResponse<void>>(`${this.base}/assign`, req); }
@@ -59,11 +72,29 @@ markFineAsPaid(violationNumber: string) {
     {}
   );
 }
-  searchFines(violationNumber?: string, isPaid?: boolean, page = 1, pageSize = 10) {
-  let params: any = { page, pageSize };
+searchFines(
+  violationNumber?: string,
+  carPlate?: string,
+  isPaid?: boolean,
+  page: number = 1,
+  pageSize: number = 10
+) {
+  let params: any = {
+    page,
+    pageSize
+  };
 
-  if (violationNumber) params.violationNumber = violationNumber;
-  if (isPaid !== undefined) params.isPaid = isPaid;
+  if (violationNumber) {
+    params.violationNumber = violationNumber;
+  }
+
+  if (carPlate) {
+    params.carPlate = carPlate;
+  }
+
+  if (isPaid !== null && isPaid !== undefined) {
+    params.isPaid = isPaid;
+  }
 
   return this.http.get<ApiResponse<any>>(
     `${this.base}/search`,
@@ -92,13 +123,17 @@ markAsPaid(tripNumber: string) {
     {}
   );
 }
-searchFees(tripNumber?: string, isPaid?: boolean, page = 1, pageSize = 10) {
-  let params: any = {
-    page,
-    pageSize
-  };
+searchFees(
+  tripNumber?: string,
+  carPlate?: string,
+  isPaid?: boolean,
+  page = 1,
+  pageSize = 10
+) {
+  let params: any = { page, pageSize };
 
   if (tripNumber) params.tripNumber = tripNumber;
+  if (carPlate) params.carPlate = carPlate;
   if (isPaid !== undefined) params.isPaid = isPaid;
 
   return this.http.get<ApiResponse<any>>(
@@ -111,5 +146,34 @@ searchFees(tripNumber?: string, isPaid?: boolean, page = 1, pageSize = 10) {
     const form = new FormData();
     form.append('file', file);
     return this.http.post<ApiResponse<EntranceFeeImportResult>>(`${this.base}/import`, form);
+  }
+}
+
+// ── Payment Service ───────────────────────────────────────────────────────────
+@Injectable({ providedIn: 'root' })
+export class PaymentService {
+  private http = inject(HttpClient);
+  private base = `${environment.apiUrl}/payment`;
+
+  getAll(): Observable<ApiResponse<MonthlyRentalPaymentDto[]>> {
+    return this.http.get<ApiResponse<MonthlyRentalPaymentDto[]>>(this.base);
+  }
+
+  getSystemSummary() {
+    return this.http.get<ApiResponse<SystemMonthlyRowDto>>(
+      `${this.base}/system-summary`
+    );
+  }
+
+  getById(id: string): Observable<ApiResponse<MonthlyRentalPaymentDto>> {
+    return this.http.get<ApiResponse<MonthlyRentalPaymentDto>>(`${this.base}/${id}`);
+  }
+
+  create(req: CreateMonthlyRentalPaymentRequestDto): Observable<ApiResponse<any>> {
+    return this.http.post<ApiResponse<any>>(this.base, req);
+  }
+
+  update(id: string, req: UpdateMonthlyRentalPaymentRequestDto): Observable<ApiResponse<any>> {
+    return this.http.put<ApiResponse<any>>(`${this.base}/${id}`, req);
   }
 }

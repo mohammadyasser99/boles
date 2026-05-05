@@ -9,9 +9,14 @@ namespace CarRental.Application.Interfaces
 {
     public interface IMonthlyRentalPaymentService
     {
-
         Task<CreateMonthlyRentalPaymentResponseDtos> CreateAsync(
     CreateMonthlyRentalPaymentRequestDtos request);
+        Task<CarSummaryDto> GetMonthlySummaryAsync(string carPlate);
+
+        Task UpdateAsync(Guid id, UpdateMonthlyRentalPaymentRequestDto request);
+        Task<List<MonthlyRentalPaymentDto>> GetAllAsync();
+        Task<MonthlyRentalPaymentDto> GetByIdAsync(Guid id);
+        Task<SystemFinancialSummaryDto> GetSystemMonthlySummaryAsync();
 
     }
 

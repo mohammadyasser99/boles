@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace CarRental.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class AddEntranceFeesAndRentalPriceee : Migration
+    public partial class initial : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -35,7 +35,10 @@ namespace CarRental.Infrastructure.Migrations
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Name = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
                     PhoneNumber = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: false),
-                    Email = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false)
+                    Email = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    NationalId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    DateOfPayment = table.Column<DateOnly>(type: "date", nullable: true),
+                    JoinDate = table.Column<DateOnly>(type: "date", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -47,7 +50,10 @@ namespace CarRental.Infrastructure.Migrations
                 columns: table => new
                 {
                     CarPlate = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
-                    TotalDebt = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Brand = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Model = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Year = table.Column<int>(type: "int", nullable: true),
+                    ChassisNumber = table.Column<string>(type: "nvarchar(17)", maxLength: 17, nullable: true),
                     RentalPrice = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
                     UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
                 },
@@ -61,7 +67,32 @@ namespace CarRental.Infrastructure.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.SetNull);
                 });
-            
+
+            migrationBuilder.CreateTable(
+                name: "UserDocuments",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    DocumentType = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: false),
+                    FileName = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: false),
+                    StoredFileName = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: false),
+                    FilePath = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
+                    ContentType = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    FileSizeBytes = table.Column<long>(type: "bigint", nullable: false),
+                    UploadedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_UserDocuments", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_UserDocuments_Users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
             migrationBuilder.CreateTable(
                 name: "EntranceFees",
                 columns: table => new
@@ -73,7 +104,8 @@ namespace CarRental.Infrastructure.Migrations
                     GateName = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
                     Direction = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
                     TripDate = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    ImportedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    ImportedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    IsPaid = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -96,7 +128,8 @@ namespace CarRental.Infrastructure.Migrations
                     Amount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     ViolationDate = table.Column<DateTime>(type: "datetime2", nullable: true),
                     Description = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
-                    ImportedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    ImportedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    IsPaid = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -109,11 +142,47 @@ namespace CarRental.Infrastructure.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            migrationBuilder.CreateTable(
+                name: "MonthlyRentalPayment",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Year = table.Column<int>(type: "int", nullable: false),
+                    Month = table.Column<int>(type: "int", nullable: false),
+                    Amount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    PaidAt = table.Column<DateOnly>(type: "date", nullable: false),
+                    CarPlate = table.Column<string>(type: "nvarchar(20)", nullable: false),
+                    UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_MonthlyRentalPayment", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_MonthlyRentalPayment_Cars_CarPlate",
+                        column: x => x.CarPlate,
+                        principalTable: "Cars",
+                        principalColumn: "CarPlate",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_MonthlyRentalPayment_Users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
             migrationBuilder.CreateIndex(
                 name: "IX_Admins_Username",
                 table: "Admins",
                 column: "Username",
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Cars_ChassisNumber",
+                table: "Cars",
+                column: "ChassisNumber",
+                unique: true,
+                filter: "[ChassisNumber] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Cars_UserId",
@@ -143,9 +212,31 @@ namespace CarRental.Infrastructure.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_MonthlyRentalPayment_CarPlate",
+                table: "MonthlyRentalPayment",
+                column: "CarPlate");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MonthlyRentalPayment_UserId",
+                table: "MonthlyRentalPayment",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserDocuments_UserId_DocumentType",
+                table: "UserDocuments",
+                columns: new[] { "UserId", "DocumentType" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Users_Email",
                 table: "Users",
                 column: "Email",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Users_NationalId",
+                table: "Users",
+                column: "NationalId",
                 unique: true);
         }
 
@@ -160,6 +251,12 @@ namespace CarRental.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "Fines");
+
+            migrationBuilder.DropTable(
+                name: "MonthlyRentalPayment");
+
+            migrationBuilder.DropTable(
+                name: "UserDocuments");
 
             migrationBuilder.DropTable(
                 name: "Cars");

@@ -6,11 +6,11 @@ import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
-
+import { FormsModule } from '@angular/forms';
 @Component({
   selector: 'app-fines',
   standalone: true,
-  imports: [CommonModule, TableModule, ButtonModule, ToastModule],
+  imports: [CommonModule, TableModule, ButtonModule, ToastModule, FormsModule],
   providers: [MessageService],
   templateUrl: './fines.component.html',
   styleUrl: './fines.component.css'
@@ -34,7 +34,8 @@ export class FinesComponent implements OnInit {
 
   searchViolationNumber = signal('');
   searchIsPaid = signal<boolean | null>(null);
-
+  selectedSearchType: 'violation' | 'carPlate' = 'violation';
+  searchCarPlate = signal('');
   loadingFines = signal(false);
   processingFine = signal<string | null>(null);
 
@@ -43,10 +44,20 @@ export class FinesComponent implements OnInit {
   // ================= LOAD =================
   loadFines(): void {
     this.loadingFines.set(true);
-
+  
+    let violationNumber: string | undefined = undefined;
+    let carPlate: string | undefined = undefined;
+  
+    if (this.selectedSearchType === 'violation') {
+      violationNumber = this.searchViolationNumber() || undefined;
+    } else {
+      carPlate = this.searchCarPlate() || undefined;
+    }
+  
     this.fineService
       .searchFines(
-        this.searchViolationNumber() || undefined,
+        violationNumber,
+        carPlate,
         this.searchIsPaid() ?? undefined,
         this.page(),
         this.pageSize
@@ -54,9 +65,7 @@ export class FinesComponent implements OnInit {
       .subscribe({
         next: res => {
           this.loadingFines.set(false);
-
-          console.log('API:', res);
-
+  
           if (res.success && res.data) {
             this.fines.set(res.data.items);
             this.totalRecords.set(res.data.totalCount);
@@ -86,6 +95,16 @@ export class FinesComponent implements OnInit {
     this.pageSize = event.rows;
     this.loadFines();
   }
+
+
+  onSearchInput(value: string) {
+    if (this.selectedSearchType === 'violation') {
+      this.searchViolationNumber.set(value);
+    } else {
+      this.searchCarPlate.set(value);
+    }
+  }
+
 
   // ================= MARK PAID =================
   markFineAsPaid(violationNumber: string) {

@@ -49,6 +49,16 @@
             <i class="nav-icon pi pi-map-marker text-brand-400 w-4 text-center"></i>
             <span class="font-body font-medium text-sm">Entrance Fees</span>
           </a>
+          <a routerLink="/monthly-rental-payments"
+   routerLinkActive="active"
+   class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-surface-600 hover:bg-surface-50 transition-all duration-200 cursor-pointer no-underline">
+
+  <i class="nav-icon pi pi-money-bill text-brand-400 w-4 text-center"></i>
+
+  <span class="font-body font-medium text-sm">
+    Monthly Payments
+  </span>
+</a>
 
           @if (auth.isSuperAdmin()) {
             <p class="text-xs font-display font-600 text-surface-200 uppercase tracking-widest px-3 mb-3 mt-5">System</p>

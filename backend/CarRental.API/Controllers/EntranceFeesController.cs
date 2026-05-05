@@ -66,11 +66,12 @@ namespace CarRental.API.Controllers
         [HttpGet("search")]
         public async Task<IActionResult> Search(
             string? tripNumber,
+            string? carPlate,
             bool? isPaid,
             int page = 1,
             int pageSize = 10)
         {
-            var result = await _entranceFeeService.SearchAsync(tripNumber, isPaid, page, pageSize);
+            var result = await _entranceFeeService.SearchAsync(tripNumber, carPlate, isPaid, page, pageSize);
             return Ok(ApiResponse<PagedResult<EntranceFeeDetailsDto>>.Ok(result));
         }
 

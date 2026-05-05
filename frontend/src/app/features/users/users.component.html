@@ -1,80 +1,88 @@
-   <p-toast />
-    <p-confirmDialog />
-
-    <div class="space-y-5">
-      <div class="flex items-center justify-between">
-        <div>
-          <h1 class="font-display font-800 text-surface-800 text-2xl">Users</h1>
-          <p class="text-surface-400 text-sm mt-1">Manage rental customers</p>
-        </div>
-        <button (click)="openCreate()" pButton label="Add User" icon="pi pi-user-plus"
-                class="!bg-brand-600 !border-brand-600 !font-display !font-700 !rounded-xl shadow-glow"></button>
-      </div>
-
-      <div class="bg-white rounded-2xl shadow-card border border-surface-200 overflow-hidden">
-        <p-table [value]="users()" [loading]="loading()" [paginator]="true" [rows]="10" styleClass="border-0">
-          <ng-template pTemplate="caption">
-            <div class="flex items-center px-2 py-1">
-              <span class="text-xs text-surface-400 font-mono ml-auto">{{ users().length }} users</span>
-            </div>
-          </ng-template>
-          <ng-template pTemplate="header">
-            <tr>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Phone</th>
-              <th class="text-right">Actions</th>
-            </tr>
-          </ng-template>
-          <ng-template pTemplate="body" let-user>
-            <tr>
-              <td>
-                <div class="flex items-center gap-3">
-                  <p-avatar [label]="user.name.charAt(0).toUpperCase()" shape="circle"
-                            styleClass="!bg-brand-100 !text-brand-700 !font-display !font-700" />
-                  <span class="font-display font-600 text-surface-800 text-sm">{{ user.name }}</span>
-                </div>
-              </td>
-              <td><span class="text-sm text-surface-600 font-mono">{{ user.email }}</span></td>
-              <td><span class="text-sm text-surface-600">{{ user.phoneNumber }}</span></td>
-              <td>
-                <div class="flex justify-end gap-1">
-                  <button pButton icon="pi pi-pencil" pTooltip="Edit"
-                          class="!p-button-text !p-button-sm !text-brand-500 !rounded-lg"
-                          (click)="openEdit(user)"></button>
-                  <button pButton icon="pi pi-trash" pTooltip="Delete"
-                          class="!p-button-text !p-button-sm !text-red-400 !rounded-lg"
-                          (click)="deleteUser(user)"></button>
-                </div>
-              </td>
-            </tr>
-          </ng-template>
-          <ng-template pTemplate="emptymessage">
-            <tr><td colspan="4" class="text-center text-surface-400 py-12">No users found.</td></tr>
-          </ng-template>
-        </p-table>
-      </div>
+<p-toast /> <p-confirmDialog />
+<div class="space-y-5">
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="font-display font-800 text-surface-800 text-2xl">Users</h1>
+      <p class="text-surface-400 text-sm mt-1">Manage rental customers</p>
     </div>
-
-    <!-- Create/Edit Dialog -->
-    <p-dialog [header]="editMode() ? 'Edit User' : 'Add New User'" [(visible)]="showDialog" [modal]="true" [style]="{width:'440px'}">
-      <div class="space-y-4 pt-2">
-        <div class="space-y-1.5">
-          <label class="text-xs font-display font-600 text-surface-500 uppercase tracking-wider">Full Name *</label>
-          <input pInputText [(ngModel)]="form.name" placeholder="John Doe" class="w-full !rounded-xl" />
-        </div>
-        <div class="space-y-1.5">
-          <label class="text-xs font-display font-600 text-surface-500 uppercase tracking-wider">Email *</label>
-          <input pInputText [(ngModel)]="form.email" placeholder="john@example.com" class="w-full !rounded-xl" />
-        </div>
-        <div class="space-y-1.5">
-          <label class="text-xs font-display font-600 text-surface-500 uppercase tracking-wider">Phone Number *</label>
-          <input pInputText [(ngModel)]="form.phoneNumber" placeholder="+971 50 000 0000" class="w-full !rounded-xl" />
-        </div>
-      </div>
-      <ng-template pTemplate="footer">
-        <button pButton label="Cancel" class="!p-button-text !rounded-xl" (click)="showDialog=false"></button>
-        <button pButton [label]="editMode() ? 'Update' : 'Create'" icon="pi pi-check" [loading]="saving()"
-                class="!bg-brand-600 !border-brand-600 !rounded-xl !font-display !font-700" (click)="saveUser()"></button>
-      </ng-template>
-    </p-dialog>
+  
+    <div class="flex gap-2">
+      <!-- 🟡 Create User Car -->
+      <button
+        pButton
+        label="Create User Car"
+        icon="pi pi-car"
+(click)="goToCreateUserCar()"        class="!bg-yellow-400 !border-yellow-400 !text-black !font-display !font-700 !rounded-xl hover:!bg-yellow-500"
+      ></button>
+  
+      <!-- 🔵 Add User -->
+      <button
+        (click)="openCreate()"
+        pButton
+        label="Add User"
+        icon="pi pi-user-plus"
+        class="!bg-brand-600 !border-brand-600 !font-display !font-700 !rounded-xl shadow-glow"
+      ></button>
+    </div>
+  </div>
+  <div class="bg-white rounded-2xl shadow-card border border-surface-200 overflow-hidden"> <p-table [value]="users()"
+      [loading]="loading()" [paginator]="true" [rows]="10" styleClass="border-0"> <ng-template pTemplate="caption">
+        <div class="flex items-center px-2 py-1"> <span class="text-xs text-surface-400 font-mono ml-auto">{{
+            users().length }} users</span> </div>
+      </ng-template> <ng-template pTemplate="header">
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Phone</th>
+          <th class="text-right">Actions</th>
+        </tr>
+      </ng-template> <ng-template pTemplate="body" let-user>
+        <tr>
+          <td>
+            <div class="flex items-center gap-3"> <p-avatar [label]="user.name.charAt(0).toUpperCase()" shape="circle"
+                styleClass="!bg-brand-100 !text-brand-700 !font-display !font-700" /> <span
+                class="font-display font-600 text-surface-800 text-sm">{{ user.name }}</span> </div>
+          </td>
+          <td><span class="text-sm text-surface-600 font-mono">{{ user.email }}</span></td>
+          <td><span class="text-sm text-surface-600">{{ user.phoneNumber }}</span></td>
+          <td>
+            <div class="flex justify-end gap-1"> <button pButton icon="pi pi-pencil" pTooltip="Edit"
+                tooltipPosition="top" (click)="openEdit(user)"></button> <button pButton label="Edit User With Car"
+                icon="pi pi-car" class="!bg-yellow-500 !border-yellow-500 !text-black" tooltipPosition="top"
+                (click)="edituserandcar(user)"></button> </div>
+          </td>
+        </tr>
+      </ng-template> <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="4" class="text-center text-surface-400 py-12">No users found.</td>
+        </tr>
+      </ng-template> </p-table> </div>
+</div> <!-- Create/Edit Dialog --> <p-dialog [header]="editMode() ? 'Edit User' : 'Add New User'"
+  [(visible)]="showDialog" [modal]="true" [style]="{width:'440px'}">
+  <div class="space-y-4 pt-2">
+    <div class="space-y-1.5"> <label
+        class="text-xs font-display font-600 text-surface-500 uppercase tracking-wider">Full Name *</label> <input
+        pInputText [(ngModel)]="form.name" placeholder="John Doe" class="w-full !rounded-xl" /> </div>
+    <div class="space-y-1.5"> <label
+        class="text-xs font-display font-600 text-surface-500 uppercase tracking-wider">Email *</label> <input
+        pInputText [(ngModel)]="form.email" placeholder="john@example.com" class="w-full !rounded-xl" /> </div>
+    <div class="space-y-1.5"> <label
+        class="text-xs font-display font-600 text-surface-500 uppercase tracking-wider">Phone Number *</label> <input
+        pInputText [(ngModel)]="form.phoneNumber" placeholder="+971 50 000 0000" class="w-full !rounded-xl" /> </div>
+    <div class="space-y-1.5"> <label
+        class="text-xs font-display font-600 text-surface-500 uppercase tracking-wider">National ID *</label> <input
+        pInputText [(ngModel)]="form.nationalId" placeholder="1234567890" class="w-full !rounded-xl" /> </div>
+    <div class="space-y-1.5"> <label class="text-xs font-display font-600 text-surface-500 uppercase tracking-wider">
+        Join Date * </label> <p-calendar [(ngModel)]="form.joinDate" dateFormat="yy-mm-dd" [showIcon]="true"
+        styleClass="w-full" inputStyleClass="w-full !rounded-xl" appendTo="body"> </p-calendar> </div>
+    <div class="space-y-1.5"> <label class="text-xs font-display font-600 text-surface-500 uppercase"> Document
+        (Optional) </label> <input type="file" (change)="onFileSelected($event)" class="w-full" /> </div>
+    <div class="space-y-1.5"> <label class="text-xs font-display font-600 text-surface-500 uppercase"> Document Type
+      </label> <p-dropdown
+        [options]="[ {label:'Contract', value:'Contract'}, {label:'Driving Licence', value:'DrivingLicence'}, {label:'National ID', value:'NationalId'} ]"
+        [(ngModel)]="documentType" placeholder="Select type" appendTo="body" class="w-full"> </p-dropdown> </div>
+  </div> <ng-template pTemplate="footer"> <button pButton label="Cancel" class="!p-button-text !rounded-xl"
+      (click)="showDialog=false"></button> <button pButton [label]="editMode() ? 'Update' : 'Create'" icon="pi pi-check"
+      [loading]="saving()" class="!bg-brand-600 !border-brand-600 !rounded-xl !font-display !font-700"
+      (click)="saveUser()"></button> </ng-template>
+</p-dialog>

@@ -32,7 +32,7 @@ public static class DependencyInjection
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<ICarRepository, CarRepository>();
         services.AddScoped<IFineRepository, FineRepository>();
-
+services.AddScoped<IMailManager, MailService > ();
         // ── Infrastructure Services ──────────────────────────────────────────
         services.AddScoped<IJwtService, JwtService>();
         services.AddScoped<IExcelParserService, ExcelParserService>();
@@ -56,6 +56,8 @@ public static class DependencyInjection
 
         services.AddScoped<IWhatsAppSenderService, TwilioWhatsAppSenderService>();
         services.AddScoped<IWhatsAppService, WhatsAppService>();
+        services.AddScoped<IMonthlyRentalPaymentService , MonthlyRentalPaymentService>();
+        services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
 
 
         return services;

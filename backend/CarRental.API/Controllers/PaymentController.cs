@@ -37,5 +37,65 @@ namespace CarRental.API.Controllers
                 return BadRequest(ApiResponse<object>.Fail(ex.Message));
             }
         }
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(Guid id, [FromBody] UpdateMonthlyRentalPaymentRequestDto request)
+        {
+            try
+            {
+                await _paymentService.UpdateAsync(id, request);
+                return Ok(ApiResponse<object>.Ok(null, "Payment updated successfully."));
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ApiResponse<object>.Fail(ex.Message));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<object>.Fail(ex.Message));
+            }
+        }
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetById(Guid id)
+        {
+            try
+            {
+                var result = await _paymentService.GetByIdAsync(id);
+                return Ok(ApiResponse<MonthlyRentalPaymentDto>.Ok(result));
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ApiResponse<object>.Fail(ex.Message));
+            }
+        }
+
+
+
+        [HttpGet]
+        public async Task<IActionResult> GetAll()
+        {
+            var result = await _paymentService.GetAllAsync();
+            return Ok(ApiResponse<List<MonthlyRentalPaymentDto>>.Ok(result));
+        }
+
+        [HttpGet("system-summary")]
+        [ProducesResponseType(typeof(ApiResponse<SystemFinancialSummaryDto>), 200)]
+        public async Task<IActionResult> GetSystemMonthlySummary()
+        {
+            try
+            {
+                var result = await _paymentService.GetSystemMonthlySummaryAsync();
+
+                return Ok(
+                    ApiResponse<SystemFinancialSummaryDto>
+                        .Ok(result, "System financial summary retrieved successfully."));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<object>.Fail(ex.Message));
+            }
+        }
+
     }
 }

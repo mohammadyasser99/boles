@@ -82,14 +82,36 @@
   </h3>
 
   <!-- Filters -->
-  <div class="flex gap-3">
+  <div class="flex gap-3 pb-3">
+
+    <!-- Mode selector -->
+    <select
+      class="px-3 py-2 border rounded-lg"
+      (change)="searchMode.set($any($event.target).value || null)"
+    >
+      <option value="">Select Search Type</option>
+      <option value="trip">Violation / Trip Number</option>
+      <option value="car">Car Plate</option>
+    </select>
+  
+    <!-- Dynamic input -->
     <input
+      *ngIf="searchMode() === 'trip'"
       type="text"
       placeholder="Trip Number"
       class="px-3 py-2 border rounded-lg w-full"
       (input)="searchTripNumber.set($any($event.target).value)"
     />
-
+  
+    <input
+      *ngIf="searchMode() === 'car'"
+      type="text"
+      placeholder="Car Plate"
+      class="px-3 py-2 border rounded-lg w-full"
+      (input)="searchCarPlate.set($any($event.target).value)"
+    />
+  
+    <!-- Paid filter -->
     <select
       class="px-3 py-2 border rounded-lg"
       (change)="searchIsPaid.set($any($event.target).value === '' ? null : $any($event.target).value === 'true')"
@@ -98,13 +120,14 @@
       <option value="false">Unpaid</option>
       <option value="true">Paid</option>
     </select>
-
+  
     <button
       (click)="search()"
       class="px-4 py-2 bg-purple-600 text-white rounded-lg"
     >
       Search
     </button>
+  
   </div>
 
   <!-- Table -->

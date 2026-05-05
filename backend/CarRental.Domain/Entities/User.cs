@@ -7,6 +7,7 @@ public class User
     public string Email { get; set; } 
     public string NationalId { get; set; }
     public DateOnly? DateOfPayment { get; set; }
+    public DateOnly JoinDate { get; set; }
     // Navigation
     public virtual ICollection<Car> Cars { get; set; } = new List<Car>();
     public virtual ICollection<MonthlyRentalPayment> MonthlyPayments { get; set; }

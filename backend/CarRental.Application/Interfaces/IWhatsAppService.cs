@@ -12,5 +12,6 @@ namespace CarRental.Application.Interfaces
         Task<WhatsAppMessageResultDto> SendMessageAsync(string toPhoneNumber, string message);
         Task<WhatsAppMessageResultDto> SendDebtReminderAsync(string carPlate);
         Task<IEnumerable<WhatsAppMessageResultDto>> SendBulkDebtRemindersAsync();
+        Task<bool> SendDebtReminderEmailAsync(string carPlate);
     }
 }

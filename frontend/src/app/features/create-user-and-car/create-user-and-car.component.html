@@ -1,0 +1,59 @@
+    <p-toast></p-toast>
+
+    <div class="max-w-4xl mx-auto p-6 bg-white shadow-xl rounded-2xl space-y-6">
+
+      <h2 class="text-2xl font-bold text-gray-800">Create User & Car</h2>
+
+      <!-- USER -->
+      <div class="grid md:grid-cols-2 gap-4">
+        <input pInputText [(ngModel)]="model.name" placeholder="Name" class="w-full" />
+        <input pInputText [(ngModel)]="model.phoneNumber" placeholder="Phone Number" class="w-full" />
+        <input pInputText [(ngModel)]="model.email" placeholder="Email" class="w-full" />
+        <input pInputText [(ngModel)]="model.nationalId" placeholder="National ID" class="w-full" />
+      </div>
+
+      <!-- PAYMENT DATE -->
+      <div>
+        <label class="block text-sm mb-1 text-gray-600">Date of Payment</label>
+        <p-calendar [(ngModel)]="model.dateOfPayment"
+                    dateFormat="yy-mm-dd"
+                    class="w-full"
+                    [showIcon]="true">
+        </p-calendar>
+      </div>
+
+      <!-- JOIN DATE -->
+      <div>
+        <label class="block text-sm mb-1 text-gray-600">Join Date</label>
+        <p-calendar [(ngModel)]="model.joinDate"
+                    dateFormat="yy-mm-dd"
+                    class="w-full"
+                    [showIcon]="true">
+        </p-calendar>
+      </div>
+
+      <!-- CAR -->
+      <div class="border-t pt-4 space-y-4">
+        <h3 class="text-lg font-semibold text-gray-700">Car Info</h3>
+
+        <div class="grid md:grid-cols-2 gap-4">
+          <input pInputText [(ngModel)]="model.carPlate" placeholder="Car Plate" />
+          <input pInputText [(ngModel)]="model.brand" placeholder="Brand" />
+          <input pInputText [(ngModel)]="model.modelName" placeholder="Model" />
+          <input type="number" [(ngModel)]="model.year" placeholder="Year" class="p-inputtext p-component w-full"/>
+          <input type="number" [(ngModel)]="model.rentalPrice" placeholder="Rental Price" class="p-inputtext w-full"/>
+          <input pInputText [(ngModel)]="model.chassisNumber" placeholder="Chassis Number" />
+        </div>
+      </div>
+
+      <!-- SUBMIT -->
+      <div class="flex justify-end">
+        <button pButton
+        [label]="isEditMode ? 'Update' : 'Create'"
+        [icon]="isEditMode ? 'pi pi-pencil' : 'pi pi-check'"
+        class="p-button-success"
+        (click)="submit()">
+</button>
+      </div>
+
+    </div>

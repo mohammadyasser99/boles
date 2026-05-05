@@ -22,12 +22,63 @@ export interface RefreshTokenResponse {
 
 // User
 export interface User { id: string; name: string; phoneNumber: string; email: string; }
-export interface CreateUserRequest { name: string; phoneNumber: string; email: string; }
+export interface CreateUserRequest {
+  // User
+  name: string;
+  phoneNumber: string;
+  email: string;
+  nationalId?: string;
 
+  // Document (optional)
+  documentFile?: File;
+  documentType?: string;
+}
 // Car
-export interface Car { carPlate: string; totalDebt: number; rentalPrice: number; userId?: string; userName?: string; }
-export interface CreateCarRequest { carPlate: string; rentalPrice?: number; }
+export interface Car { carPlate: string; totalDebt: number; rentalPrice: number; userId?: string; userName?: string;totaldebs?:number }
+export interface CreateCarRequest {   carPlate: string;
+  rentalPrice?: number;
+  brand?: string;
+  model?: string;
+  year?: number | null;
+  chassisNumber?: string; }
 export interface AssignCarRequest { carPlate: string; userId: string; }
+export interface CarMonthlyRowDto {
+  year: number;
+  month: number;
+  rentalPrice: number;
+  paymentDate: string | null;
+  amountPaid: number;
+  totalFines: number;
+  finesCount: number;
+  totalEntranceFees: number;
+  entranceFeesCount: number;
+}
+export interface CarSummaryDto {
+  carPlate: string;
+  brand: string | null;
+  model: string | null;
+  carYear: number | null;
+  rentalPrice: number;
+  rows: CarMonthlyRowDto[];
+  joinDate: string | null;
+}
+export interface MonthlyRentalPaymentDto {
+  id: string;
+  amount: number;
+  paidAt: string;
+  carPlate: string;
+  userId: string;
+}
+export interface CreateMonthlyRentalPaymentRequestDto {
+  amount: number;
+  paidAt: string;
+  carPlate: string;
+  userId: string;
+}
+export interface UpdateMonthlyRentalPaymentRequestDto {
+  amount: number;
+  paidAt: string;
+}
 
 // Admin
 export interface Admin { id: string; name: string; username: string; role: string; }
@@ -68,4 +119,27 @@ export interface CarDebt {
   userName?: string;
   userEmail?: string;
   userPhone?: string;
+}
+
+
+export interface PagedResult<T> {
+  items: T[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface SystemMonthlyRowDto {
+  year: number;
+  month: number;
+
+  totalRevenue: number;
+  totalDebt: number;
+  netBalance: number;
+
+  totalFines: number;
+  finesCount: number;
+
+  totalEntranceFees: number;
+  entranceFeesCount: number;
 }

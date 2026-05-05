@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CarRental.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260425164539_adddocuments")]
-    partial class adddocuments
+    [Migration("20260503162533_initial")]
+    partial class initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -21,6 +21,9 @@ namespace CarRental.Infrastructure.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasAnnotation("ProductVersion", "8.0.26")
+                .HasAnnotation("Proxies:ChangeTracking", false)
+                .HasAnnotation("Proxies:CheckEquality", false)
+                .HasAnnotation("Proxies:LazyLoading", true)
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -72,16 +75,13 @@ namespace CarRental.Infrastructure.Migrations
                         .HasColumnType("nvarchar(20)");
 
                     b.Property<string>("Brand")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ChassisNumber")
-                        .IsRequired()
                         .HasMaxLength(17)
                         .HasColumnType("nvarchar(17)");
 
                     b.Property<string>("Model")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal?>("RentalPrice")
@@ -90,13 +90,14 @@ namespace CarRental.Infrastructure.Migrations
                     b.Property<Guid?>("UserId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<int>("Year")
+                    b.Property<int?>("Year")
                         .HasColumnType("int");
 
                     b.HasKey("CarPlate");
 
                     b.HasIndex("ChassisNumber")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[ChassisNumber] IS NOT NULL");
 
                     b.HasIndex("UserId");
 
@@ -127,6 +128,9 @@ namespace CarRental.Infrastructure.Migrations
 
                     b.Property<DateTime>("ImportedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsPaid")
+                        .HasColumnType("bit");
 
                     b.Property<DateTime?>("TripDate")
                         .HasColumnType("datetime2");
@@ -167,6 +171,9 @@ namespace CarRental.Infrastructure.Migrations
                     b.Property<DateTime>("ImportedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<bool>("IsPaid")
+                        .HasColumnType("bit");
+
                     b.Property<DateTime?>("ViolationDate")
                         .HasColumnType("datetime2");
 
@@ -185,6 +192,40 @@ namespace CarRental.Infrastructure.Migrations
                     b.ToTable("Fines");
                 });
 
+            modelBuilder.Entity("CarRental.Domain.Entities.MonthlyRentalPayment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("CarPlate")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("Month")
+                        .HasColumnType("int");
+
+                    b.Property<DateOnly>("PaidAt")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CarPlate");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("MonthlyRentalPayment");
+                });
+
             modelBuilder.Entity("CarRental.Domain.Entities.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -198,6 +239,9 @@ namespace CarRental.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateOnly>("JoinDate")
+                        .HasColumnType("date");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -304,6 +348,25 @@ namespace CarRental.Infrastructure.Migrations
                     b.Navigation("Car");
                 });
 
+            modelBuilder.Entity("CarRental.Domain.Entities.MonthlyRentalPayment", b =>
+                {
+                    b.HasOne("CarRental.Domain.Entities.Car", "Car")
+                        .WithMany("MonthlyPayments")
+                        .HasForeignKey("CarPlate")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CarRental.Domain.Entities.User", "User")
+                        .WithMany("MonthlyPayments")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Car");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("CarRental.Domain.Entities.UserDocument", b =>
                 {
                     b.HasOne("CarRental.Domain.Entities.User", "User")
@@ -320,11 +383,15 @@ namespace CarRental.Infrastructure.Migrations
                     b.Navigation("EntranceFees");
 
                     b.Navigation("Fines");
+
+                    b.Navigation("MonthlyPayments");
                 });
 
             modelBuilder.Entity("CarRental.Domain.Entities.User", b =>
                 {
                     b.Navigation("Cars");
+
+                    b.Navigation("MonthlyPayments");
                 });
 #pragma warning restore 612, 618
         }

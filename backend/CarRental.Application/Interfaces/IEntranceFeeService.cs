@@ -11,6 +11,7 @@ namespace CarRental.Application.Interfaces
         Task<TotalEntranceFeesForCar?> GetCarEntranceFeesByPlateAsync(string carPlate);
         Task<PagedResult<EntranceFeeDetailsDto>> SearchAsync(
     string? tripNumber,
+    string? carPlate,
     bool? isPaid,
     int page,
     int pageSize);

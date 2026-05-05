@@ -37,7 +37,26 @@ export const routes: Routes = [
         path: 'admins',
         canActivate: [superAdminGuard],
         loadComponent: () => import('./features/admins/admins.component').then(m => m.AdminsComponent)
-      }
+      },
+            {
+        path: 'create-user-car',
+        canActivate: [superAdminGuard],
+        loadComponent: () => import('./features/create-user-and-car/create-user-and-car.component').then(m => m.CreateUserAndCarComponent)
+      },
+      {
+        path: 'create-user-car/:userId',
+        canActivate: [superAdminGuard],
+        loadComponent: () => import('./features/create-user-and-car/create-user-and-car.component').then(m => m.CreateUserAndCarComponent)
+      },
+      {
+        path: 'car-payment-report/:carPlate',
+        loadComponent: () => import('./features/car-payment-report/car-payment-report.component').then(m => m.CarPaymentReportComponent)
+      },
+      {
+        path: 'monthly-rental-payments',
+        canActivate: [superAdminGuard],
+        loadComponent: () => import('./features/monthly-rental-payment/monthly-rental-payment.component').then(m => m.MonthlyRentalPaymentComponent)
+      },
     ]
   },
   { path: '**', redirectTo: 'dashboard' }

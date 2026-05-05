@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CarRental.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260425212135_addpaymenttable")]
-    partial class addpaymenttable
+    [Migration("20260504130803_removeyearandmonths")]
+    partial class removeyearandmonths
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -21,6 +21,9 @@ namespace CarRental.Infrastructure.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasAnnotation("ProductVersion", "8.0.26")
+                .HasAnnotation("Proxies:ChangeTracking", false)
+                .HasAnnotation("Proxies:CheckEquality", false)
+                .HasAnnotation("Proxies:LazyLoading", true)
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -72,16 +75,13 @@ namespace CarRental.Infrastructure.Migrations
                         .HasColumnType("nvarchar(20)");
 
                     b.Property<string>("Brand")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ChassisNumber")
-                        .IsRequired()
                         .HasMaxLength(17)
                         .HasColumnType("nvarchar(17)");
 
                     b.Property<string>("Model")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal?>("RentalPrice")
@@ -90,13 +90,14 @@ namespace CarRental.Infrastructure.Migrations
                     b.Property<Guid?>("UserId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<int>("Year")
+                    b.Property<int?>("Year")
                         .HasColumnType("int");
 
                     b.HasKey("CarPlate");
 
                     b.HasIndex("ChassisNumber")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[ChassisNumber] IS NOT NULL");
 
                     b.HasIndex("UserId");
 
@@ -202,27 +203,17 @@ namespace CarRental.Infrastructure.Migrations
 
                     b.Property<string>("CarPlate")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("CarPlate1")
-                        .IsRequired()
                         .HasColumnType("nvarchar(20)");
 
-                    b.Property<int>("Month")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("PaidAt")
-                        .HasColumnType("datetime2");
+                    b.Property<DateOnly>("PaidAt")
+                        .HasColumnType("date");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<int>("Year")
-                        .HasColumnType("int");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("CarPlate1");
+                    b.HasIndex("CarPlate");
 
                     b.HasIndex("UserId");
 
@@ -242,6 +233,9 @@ namespace CarRental.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateOnly>("JoinDate")
+                        .HasColumnType("date");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -352,7 +346,7 @@ namespace CarRental.Infrastructure.Migrations
                 {
                     b.HasOne("CarRental.Domain.Entities.Car", "Car")
                         .WithMany("MonthlyPayments")
-                        .HasForeignKey("CarPlate1")
+                        .HasForeignKey("CarPlate")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 

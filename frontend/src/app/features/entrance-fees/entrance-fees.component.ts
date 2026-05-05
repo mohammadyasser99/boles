@@ -16,7 +16,7 @@ import { MessageService } from 'primeng/api';
 export class EntranceFeesComponent implements OnInit{
 private entranceFeeService = inject(EntranceFeeService);
   private toast = inject(MessageService);
-
+  searchMode = signal<'trip' | 'car' | null>(null);
   selectedFile = signal<File | null>(null);
   uploading = signal(false);
   importResult = signal<EntranceFeeImportResult | null>(null);
@@ -25,7 +25,7 @@ totalRecords = signal(0);
 
 page = signal(1);
 pageSize = 10;
-
+searchCarPlate = signal('');
 searchTripNumber = signal('');
 searchIsPaid = signal<boolean | null>(null);
 
@@ -59,13 +59,13 @@ markAsPaid(tripNumber: string) {
 loadFees(): void {
   this.loadingFees.set(true);
 
-  this.entranceFeeService
-    .searchFees(
-      this.searchTripNumber() || undefined,
-      this.searchIsPaid() ?? undefined,
-      this.page(),
-      this.pageSize
-    )
+  this.entranceFeeService.searchFees(
+    this.searchTripNumber() || undefined,
+    this.searchCarPlate() || undefined,
+    this.searchIsPaid() ?? undefined,
+    this.page(),
+    this.pageSize
+  )
     .subscribe({
       next: res => {
         this.loadingFees.set(false);
@@ -88,13 +88,25 @@ loadFees(): void {
     if (file) this.selectedFile.set(file);
   }
 
-search(): void {
-  this.page.set(1);
-  this.loadFees();
-}
+  search(): void {
+    this.page.set(1);
+  
+    const mode = this.searchMode();
+  
+    if (mode === 'trip') {
+      this.searchCarPlate.set('');
+    }
+  
+    if (mode === 'car') {
+      this.searchTripNumber.set('');
+    }
+  
+    this.loadFees();
+  }
 
 resetFilters(): void {
   this.searchTripNumber.set('');
+  this.searchCarPlate.set('');
   this.searchIsPaid.set(null);
   this.page.set(1);
   this.loadFees();

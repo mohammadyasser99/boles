@@ -1,10 +1,8 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { FineService } from '../../core/services/api.services';
-import { CarService } from '../../core/services/api.services';
-import { UserService } from '../../core/services/api.services';
-import { CarDebt, Car, User } from '../../core/models';
+import { FineService, PaymentService } from '../../core/services/api.services';
+import { CarDebt, Car, User, SystemMonthlyRowDto } from '../../core/models';
 import { CardModule } from 'primeng/card';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
@@ -19,17 +17,21 @@ import { ButtonModule } from 'primeng/button';
 })
 export class DashboardComponent implements OnInit {
 private fineService = inject(FineService);
-  private carService = inject(CarService);
-  private userService = inject(UserService);
+private paymentService = inject(PaymentService)
 
   loading = signal(true);
   debts = signal<CarDebt[]>([]);
   cars = signal<Car[]>([]);
   users = signal<User[]>([]);
+  systemSummary = signal<SystemMonthlyRowDto | null>(null);
 
+  totalRevenue = signal(0);
   totalDebt = signal(0);
-  carsWithDebt = signal(0);
-  topDebts = signal<CarDebt[]>([]);
+  netBalance = signal(0);
+  totalFines = signal(0);
+  totalEntranceFees = signal(0);
+  finesCount = signal(0);
+  entranceFeesCount = signal(0);
 
   ngOnInit(): void {
     this.loadData();
@@ -37,18 +39,24 @@ private fineService = inject(FineService);
 
   loadData(): void {
     this.loading.set(true);
-
-    this.fineService.getAllDebts().subscribe(res => {
+  
+    this.paymentService.getSystemSummary().subscribe(res => {
       if (res.success && res.data) {
-        this.debts.set(res.data);
-        this.totalDebt.set(res.data.reduce((s, d) => s + d.totalDebt, 0));
-        this.carsWithDebt.set(res.data.filter(d => d.totalDebt > 0).length);
-        this.topDebts.set([...res.data].sort((a, b) => b.totalDebt - a.totalDebt).slice(0, 8));
+        const data = res.data;
+  
+        this.systemSummary.set(data);
+  
+        this.totalRevenue.set(data.totalRevenue);
+        this.totalDebt.set(data.totalDebt);
+        this.netBalance.set(data.netBalance);
+  
+        this.totalFines.set(data.totalFines);
+        this.totalEntranceFees.set(data.totalEntranceFees);
+        this.finesCount.set(data.finesCount);
+        this.entranceFeesCount.set(data.entranceFeesCount);
       }
+  
       this.loading.set(false);
     });
-
-    this.carService.getAll().subscribe(res => { if (res.success && res.data) this.cars.set(res.data); });
-    this.userService.getAll().subscribe(res => { if (res.success && res.data) this.users.set(res.data); });
   }
 }

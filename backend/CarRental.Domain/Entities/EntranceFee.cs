@@ -11,9 +11,9 @@ namespace CarRental.Domain.Entities
         public Guid Id { get; set; }
 
         /// <summary>رقم الرحلة - unique trip reference, used for deduplication</summary>
-        public string TripNumber { get; set; } = string.Empty;
+        public string TripNumber { get; set; }
 
-        public string CarPlate { get; set; } = string.Empty;
+        public string CarPlate { get; set; } 
 
         /// <summary>المبلغ (درهم إماراتي) - amount in AED</summary>
         public decimal Amount { get; set; }

@@ -1,0 +1,162 @@
+<div class="space-y-6 p-6">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between flex-wrap gap-3">
+      <div>
+        @if (summary(); as s) {
+          <h1 class="font-display font-800 text-surface-800 text-2xl">
+            {{ s.brand }} {{ s.model }}
+            <span class="text-brand-500 ml-2">· {{ s.carPlate }}</span>
+          </h1>
+          <p class="text-surface-400 text-sm mt-1">
+            {{ s.carYear }} · Base:
+            <span class="text-surface-700 font-600">{{ fmt(s.rentalPrice) }}</span>
+          </p>
+        } @else {
+          <h1 class="font-display font-800 text-surface-800 text-2xl">
+            Monthly Summary
+          </h1>
+          <p class="text-surface-400 text-sm mt-1">{{ carPlate() }}</p>
+        }
+      </div>
+  
+      <div class="flex items-center gap-2">
+        <p-dropdown
+          [options]="yearOptions()"
+          [ngModel]="selectedYear()"
+          (ngModelChange)="onYearChange($event)"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Year"
+          class="w-28">
+        </p-dropdown>
+  
+        <button (click)="load()" [disabled]="loading()"
+          class="w-9 h-9 flex items-center justify-center rounded-lg border border-surface-200 bg-white hover:bg-surface-50">
+          <i class="pi" [ngClass]="loading() ? 'pi-spin pi-spinner' : 'pi-refresh'"></i>
+        </button>
+      </div>
+    </div>
+  
+    <!-- Error -->
+    @if (errorMsg()) {
+      <div class="bg-red-50 border border-red-200 text-red-600 px-4 py-2 rounded-lg text-sm">
+        {{ errorMsg() }}
+      </div>
+    }
+  
+    <!-- Stats -->
+    @if (!loading() && summary()) {
+      <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
+  
+        <div class="bg-white border border-surface-200 rounded-xl p-4">
+          <p class="text-xs text-surface-400 mb-1">Total Due</p>
+          <p class="font-700 text-surface-800 text-lg">{{ fmt(totals().totalDue) }}</p>
+        </div>
+  
+        <div class="bg-white border border-surface-200 rounded-xl p-4">
+          <p class="text-xs text-surface-400 mb-1">Paid</p>
+          <p class="font-700 text-green-600 text-lg">{{ fmt(totals().amountPaid) }}</p>
+        </div>
+  
+        <div class="bg-white border border-surface-200 rounded-xl p-4">
+          <p class="text-xs text-surface-400 mb-1">Remaining</p>
+          <p class="font-700 text-lg"
+             [ngClass]="totals().remaining > 0 ? 'text-red-500' : 'text-green-600'">
+            {{ fmt(totals().remaining) }}
+          </p>
+        </div>
+  
+        <div class="bg-white border border-surface-200 rounded-xl p-4">
+          <p class="text-xs text-surface-400 mb-1">Fines</p>
+          <p class="font-700 text-orange-500 text-lg">{{ fmt(totals().totalFines) }}</p>
+        </div>
+  
+        <div class="bg-white border border-surface-200 rounded-xl p-4">
+          <p class="text-xs text-surface-400 mb-1">Entrance Fees</p>
+          <p class="font-700 text-purple-500 text-lg">{{ fmt(totals().totalEntranceFees) }}</p>
+        </div>
+  
+      </div>
+    }
+  
+    <!-- Table -->
+    <div class="bg-white rounded-2xl border border-surface-200 overflow-hidden">
+  
+      <p-table
+        [value]="loading() ? skeletonRows : displayRows()"
+        [loading]="loading()">
+  
+        <!-- Header -->
+        <ng-template pTemplate="header">
+          <tr>
+            <th>Month</th>
+            <th>Status</th>
+            <th>Payment Date</th>
+            <th>Rent</th>
+            <th>Fines</th>
+            <th>Fees</th>
+            <th>Total</th>
+            <th>Paid</th>
+            <th>Remaining</th>
+          </tr>
+        </ng-template>
+  
+        <!-- Body -->
+        <ng-template pTemplate="body" let-row>
+  
+          <tr>
+  
+            <td>{{ monthName(row.month) }}</td>
+  
+            <td>
+              @if (!isFuture(row)) {
+                <p-tag [value]="statusLabel(row)" [severity]="statusSeverity(row)" />
+              } @else {
+                —
+              }
+            </td>
+  
+            <td>
+              {{ row.paymentDate ? (row.paymentDate | date:'dd MMM yyyy') : '—' }}
+            </td>
+  
+            <td>{{ fmt(row.rentalPrice) }}</td>
+  
+            <td>
+              {{ row.totalFines > 0 ? fmt(row.totalFines) : '—' }}
+            </td>
+  
+            <td>
+              {{ row.totalEntranceFees > 0 ? fmt(row.totalEntranceFees) : '—' }}
+            </td>
+  
+            <td class="font-600">{{ fmt(row.totalDue) }}</td>
+  
+            <td class="text-green-600">
+              {{ row.amountPaid > 0 ? fmt(row.amountPaid) : '—' }}
+            </td>
+  
+            <td>
+              @if (!isFuture(row)) {
+                <span [ngClass]="{
+                  'text-red-500': row.remaining > 0,
+                  'text-green-600': row.remaining === 0,
+                  'text-blue-500': row.remaining < 0
+                }">
+                  {{ row.remaining === 0 ? 'Settled' : fmt(row.remaining) }}
+                </span>
+              } @else {
+                —
+              }
+            </td>
+  
+          </tr>
+  
+        </ng-template>
+  
+      </p-table>
+  
+    </div>
+  
+  </div>

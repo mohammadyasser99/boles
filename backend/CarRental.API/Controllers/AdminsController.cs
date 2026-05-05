@@ -8,7 +8,7 @@ namespace CarRental.API.Controllers;
 
 [ApiController]
 [Route("api/admins")]
-[Authorize(Roles = "SuperAdmin")]
+//[Authorize(Roles = "SuperAdmin")]
 public class AdminsController : ControllerBase
 {
     private readonly IAdminService _adminService;

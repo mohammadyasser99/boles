@@ -13,10 +13,12 @@ public class CarsController : ControllerBase
 {
     private readonly ICarService _carService;
     private readonly IWhatsAppService _whisService;
+    private readonly IMonthlyRentalPaymentService _monthlyRentalPaymentService;
 
-    public CarsController(ICarService carService, IWhatsAppService whatsAppService) {
+    public CarsController(ICarService carService, IWhatsAppService whatsAppService, IMonthlyRentalPaymentService monthlyRentalPaymentService    )
+    {
         _carService = carService; _whisService = whatsAppService;
-
+        _monthlyRentalPaymentService = monthlyRentalPaymentService;
     }
 
     /// <summary>Get all cars.</summary>
@@ -27,6 +29,23 @@ public class CarsController : ControllerBase
         var result = await _carService.GetAllCarsAsync();
         return Ok(ApiResponse<IEnumerable<CarDto>>.Ok(result));
     }
+
+    /// <summary>
+    /// Get all cars with full debt breakdown:
+    /// unpaid fines + unpaid entrance fees + unpaid monthly rental.
+    /// Monthly rental is calculated from the user's JoinDate up to today
+    /// minus months already recorded in MonthlyRentalPayments.
+    /// </summary>
+    [HttpGet("cars-with-debs")]
+    [ProducesResponseType(typeof(ApiResponse<IEnumerable<CarDto>>), 200)]
+    public async Task<IActionResult> GetAllWithDebts(int page = 1, int pageSize = 10)
+    {
+        var result = await _carService.GetAllWithDebts(page, pageSize);
+
+        return Ok(ApiResponse<PagedResult<CarDto>>.Ok(result));
+    }
+
+
 
     /// <summary>Get car by plate number.</summary>
     [HttpGet("{carPlate}")]
@@ -93,7 +112,27 @@ public class CarsController : ControllerBase
             return NotFound(ApiResponse<object>.Fail(ex.Message));
         }
     }
-
+    /// <summary>Send email debt reminder for a specific car plate.</summary>
+    [HttpPost("{carPlate}/send-debt-reminder-email")]
+    [ProducesResponseType(typeof(ApiResponse<string>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    public async Task<IActionResult> SendDebtReminderEmail(string carPlate)
+    {
+        try
+        {
+            await _whisService.SendDebtReminderEmailAsync(carPlate);
+            return Ok(ApiResponse<string>.Ok("Email sent.", "Debt reminder email sent successfully."));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ApiResponse<object>.Fail(ex.Message));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ApiResponse<object>.Fail(ex.Message));
+        }
+    }
     /// <summary>Send WhatsApp debt reminder for a specific car plate.</summary>
     [HttpPost("{carPlate}/send-debt-reminder")]
     [ProducesResponseType(typeof(ApiResponse<WhatsAppMessageResultDto>), 200)]
@@ -116,6 +155,8 @@ public class CarsController : ControllerBase
         }
     }
 
+
+
     [HttpPatch("{carPlate}/rental-price")]
     public async Task<IActionResult> SetRentalPrice(string carPlate, [FromBody] decimal rentalPrice)
     {
@@ -130,6 +171,31 @@ public class CarsController : ControllerBase
         }
     }
 
+
+    /// <summary>
+    /// GET /api/cars/{carPlate}/monthly-summary
+    /// Full monthly financial breakdown: rental, fines, entrance fees, remaining.
+    /// </summary>
+    [HttpGet("car-payment-report/{carPlate}")]
+    [ProducesResponseType(typeof(ApiResponse<CarSummaryDto>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    public async Task<IActionResult> GetMonthlySummary([FromRoute] string carPlate)
+    {
+        try
+        {
+            var result =await _monthlyRentalPaymentService.GetMonthlySummaryAsync(carPlate);
+            return Ok(ApiResponse<CarSummaryDto>.Ok(result));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ApiResponse<object>.Fail(ex.Message));
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ApiResponse<object>.Fail(ex.Message));
+        }
+    }
 
 
 }

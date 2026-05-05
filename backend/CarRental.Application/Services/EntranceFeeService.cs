@@ -145,17 +145,27 @@ namespace CarRental.Application.Services
 
         public async Task<PagedResult<EntranceFeeDetailsDto>> SearchAsync(
             string? tripNumber,
+            string? carPlate,
             bool? isPaid,
             int page,
             int pageSize)
         {
             var query = _entranceFeeRepository.GetAll();
 
-            if (!string.IsNullOrWhiteSpace(tripNumber))
-                query = query.Where(x => x.TripNumber.Contains(tripNumber));
+            if (!string.IsNullOrEmpty(carPlate))
+            {
+                query = query.Where(x => x.CarPlate == carPlate);
+            }
+
+            if (!string.IsNullOrEmpty(tripNumber))
+            {
+                query = query.Where(x => x.TripNumber == tripNumber);
+            }
 
             if (isPaid.HasValue)
+            {
                 query = query.Where(x => x.IsPaid == isPaid.Value);
+            }
 
             var total = await query.CountAsync();
 

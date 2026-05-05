@@ -14,6 +14,7 @@ import { ToastModule } from 'primeng/toast';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { TooltipModule } from 'primeng/tooltip';
+import { Router } from '@angular/router';
 @Component({
   selector: 'app-cars',
   standalone: true,
@@ -29,15 +30,21 @@ export class CarsComponent implements OnInit {
   private userService = inject(UserService);
   private toast = inject(MessageService);
   private confirm = inject(ConfirmationService);
-
-  cars = signal<Car[]>([]);
+  private router = inject(Router);
+cars = signal<Car[]>([]);
+totalRecords = signal(0);
+page = signal(1);
+rows = signal(10);
   loading = signal(true);
   saving = signal(false);
 
   showCreate = false;
   showAssign = false;
   showRentalPrice = false;
-
+newBrand = '';
+newModel = '';
+newYear: number | null = null;
+newChassisNumber = '';
   newPlate = '';
   newRentalPrice: number | null = null;
   selectedCar = signal<Car | null>(null);
@@ -50,27 +57,55 @@ export class CarsComponent implements OnInit {
     this.loadUsers();
   }
 
-  loadCars(): void {
-    this.loading.set(true);
-    this.carService.getAll().subscribe(res => {
-      if (res.success && res.data) this.cars.set(res.data);
+ loadCars(): void {
+  this.loading.set(true);
+
+  this.carService.getAllWithDebs(this.page(), this.rows())
+    .subscribe((res: any) => {
+
+      if (res.success && res.data) {
+        this.cars.set(res.data.items);          
+        this.totalRecords.set(res.data.totalCount);
+      }
+
       this.loading.set(false);
     });
-  }
+}
 
-  loadUsers(): void {
-    this.userService.getAll().subscribe(res => {
-      if (res.success && res.data)
-        this.userOptions.set(res.data.map(u => ({ label: `${u.name} (${u.email})`, value: u.id })));
-    });
-  }
+onPageChange(event: any): void {
+  const pageIndex = event.first / event.rows; // safest way
+
+  this.page.set(pageIndex + 1); // backend usually 1-based
+  this.rows.set(event.rows);
+
+  this.loadCars();
+}
+loadUsers(): void {
+  this.userService.getAll().subscribe(res => {
+    if (res.success && res.data) {
+      const users = res.data.map(u => ({
+        label: `${u.name} (${u.email})`,
+        value: u.id
+      }));
+
+      // 👇 add unassign option at top
+      this.userOptions.set([
+        { label: 'Unassign User', value: '' },
+        ...users
+      ]);
+    }
+  });
+}
 
   openCreate(): void { this.newPlate = ''; this.newRentalPrice = null; this.showCreate = true; }
 
   createCar(): void {
     if (!this.newPlate.trim()) { this.toast.add({ severity: 'warn', summary: 'Required', detail: 'Car plate is required.' }); return; }
     this.saving.set(true);
-    this.carService.create({ carPlate: this.newPlate.trim(), rentalPrice: this.newRentalPrice ?? 0 }).subscribe({
+    this.carService.create({ carPlate: this.newPlate.trim(), rentalPrice: this.newRentalPrice ?? 0 , brand: this.newBrand,
+  model: this.newModel,
+  year: this.newYear,
+  chassisNumber: this.newChassisNumber}).subscribe({
       next: res => {
         this.saving.set(false);
         if (res.success) { this.showCreate = false; this.toast.add({ severity: 'success', summary: 'Registered', detail: `Car ${this.newPlate} added.` }); this.loadCars(); }
@@ -83,15 +118,39 @@ export class CarsComponent implements OnInit {
   openAssign(car: Car): void { this.selectedCar.set(car); this.selectedUserId = car.userId ?? ''; this.showAssign = true; }
 
   assignCar(): void {
-    if (!this.selectedUserId) { this.toast.add({ severity: 'warn', summary: 'Required', detail: 'Please select a user.' }); return; }
     this.saving.set(true);
-    this.carService.assignToUser({ carPlate: this.selectedCar()!.carPlate, userId: this.selectedUserId }).subscribe({
+  
+    const payload: any = {
+      carPlate: this.selectedCar()!.carPlate,
+      userId: this.selectedUserId || null   // 👈 IMPORTANT
+    };
+  
+    this.carService.assignToUser(payload).subscribe({
       next: res => {
         this.saving.set(false);
-        if (res.success) { this.showAssign = false; this.toast.add({ severity: 'success', summary: 'Assigned', detail: 'Car assigned successfully.' }); this.loadCars(); }
-        else this.toast.add({ severity: 'error', summary: 'Error', detail: res.message });
+  
+        if (res.success) {
+          this.showAssign = false;
+  
+          this.toast.add({
+            severity: 'success',
+            summary: 'Updated',
+            detail: this.selectedUserId
+              ? 'Car assigned successfully.'
+              : 'Car unassigned successfully.'
+          });
+  
+          this.loadCars();
+        }
       },
-      error: () => { this.saving.set(false); this.toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to assign car.' }); }
+      error: () => {
+        this.saving.set(false);
+        this.toast.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'Failed to update assignment.'
+        });
+      }
     });
   }
 
@@ -124,6 +183,10 @@ export class CarsComponent implements OnInit {
         });
       }
     });
+  }
+
+  goToDetails(car: Car): void {
+    this.router.navigate([`/car-payment-report/${car.carPlate}`]);
   }
 
   onSearch(event: Event, dt: any): void {

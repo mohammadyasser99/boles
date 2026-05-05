@@ -11,6 +11,7 @@ public interface IFineService
     Task MarkAsPaidAsync(string ViolationNumber);
     Task<PagedResult<FineDetailsDto>> SearchAsync(
     string? violationNumber,
+    string? carPlate,
     bool? isPaid,
     int page,
     int pageSize);

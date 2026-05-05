@@ -90,11 +90,12 @@ public class FinesController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse<PagedResult<FineDetailsDto>>), 200)]
     public async Task<IActionResult> Search(
     string? violationNumber,
+    string? carPlate,
     bool? isPaid,
     int page = 1,
     int pageSize = 10)
     {
-        var result = await _fineService.SearchAsync(violationNumber, isPaid, page, pageSize);
+        var result = await _fineService.SearchAsync(violationNumber,carPlate, isPaid, page, pageSize);
         return Ok(ApiResponse<PagedResult<FineDetailsDto>>.Ok(result));
     }
 }

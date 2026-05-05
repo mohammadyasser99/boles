@@ -1,0 +1,5 @@
+:host ::ng-deep .p-datepicker {
+    width: 260px !important;
+    transform: scale(0.85);
+    transform-origin: top left;
+  }

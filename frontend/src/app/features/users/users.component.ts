@@ -12,13 +12,28 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { AvatarModule } from 'primeng/avatar';
 import { TooltipModule } from 'primeng/tooltip';
-import { Observable } from 'rxjs';
+import { DropdownModule } from 'primeng/dropdown';
+import { CalendarModule } from 'primeng/calendar';
+import { Router } from '@angular/router';
+
 @Component({
   selector: 'app-users',
   standalone: true,
-  imports: [CommonModule, FormsModule, TableModule, ButtonModule, DialogModule,
-    InputTextModule, ToastModule, ConfirmDialogModule, AvatarModule, TooltipModule],
-  providers: [MessageService, ConfirmationService],  
+  imports: [
+    CommonModule,
+    FormsModule,
+    TableModule,
+    ButtonModule,
+    DialogModule,
+    InputTextModule,
+    ToastModule,
+    ConfirmDialogModule,
+    AvatarModule,
+    TooltipModule,
+    DropdownModule,
+    CalendarModule
+  ],
+  providers: [MessageService, ConfirmationService],
   templateUrl: './users.component.html',
   styleUrl: './users.component.css'
 })
@@ -26,69 +41,135 @@ export class UsersComponent implements OnInit {
   private userService = inject(UserService);
   private toast = inject(MessageService);
   private confirm = inject(ConfirmationService);
+  private router = inject(Router);
 
   users = signal<User[]>([]);
   loading = signal(true);
   saving = signal(false);
+
   showDialog = false;
   editMode = signal(false);
   editId = '';
-  form = { name: '', email: '', phoneNumber: '' };
 
-  ngOnInit(): void { this.loadUsers(); }
+  form: any = {
+    name: '',
+    email: '',
+    phoneNumber: '',
+    nationalId: '',
+    joinDate: null
+  };
+
+  selectedFile: File | null = null;
+  documentType: string = '';
+
+  ngOnInit(): void {
+    this.loadUsers();
+  }
 
   loadUsers(): void {
     this.loading.set(true);
+
     this.userService.getAll().subscribe(res => {
-      if (res.success && res.data) this.users.set(res.data);
+      if (res.success && res.data) {
+        this.users.set(res.data);
+      }
       this.loading.set(false);
     });
   }
 
-  openCreate(): void { this.editMode.set(false); this.form = { name: '', email: '', phoneNumber: '' }; this.showDialog = true; }
+  onFileSelected(event: any): void {
+    this.selectedFile = event.target.files[0];
+  }
 
-  openEdit(user: User): void {
-    this.editMode.set(true);
-    this.editId = user.id;
-    this.form = { name: user.name, email: user.email, phoneNumber: user.phoneNumber };
+  openCreate(): void {
+    this.editMode.set(false);
+    this.form = {
+      name: '',
+      email: '',
+      phoneNumber: ''
+    };
     this.showDialog = true;
   }
 
-  saveUser(): void {
-    if (!this.form.name || !this.form.email || !this.form.phoneNumber) {
-      this.toast.add({ severity: 'warn', summary: 'Required', detail: 'All fields are required.' }); return;
-    }
-    this.saving.set(true);
-const req = (this.editMode()
-  ? this.userService.update(this.editId, this.form)
-  : this.userService.create(this.form)) as Observable<any>;
+openEdit(user: any): void {
+  this.editMode.set(true);
+  this.editId = user.id;
 
-    req.subscribe({
-      next: (res: any) => {
-        this.saving.set(false);
-        if (res.success) {
-          this.showDialog = false;
-          this.toast.add({ severity: 'success', summary: 'Saved', detail: `User ${this.editMode() ? 'updated' : 'created'} successfully.` });
-          this.loadUsers();
-        } else this.toast.add({ severity: 'error', summary: 'Error', detail: res.message });
-      },
-      error : (err:any) => { this.saving.set(false); this.toast.add({ severity: 'error', summary: 'Error', detail: err.error?.message ?? 'Operation failed.' }); }
-    });
-  }
+  this.form = {
+    name: user.name || '',
+    email: user.email || '',
+    phoneNumber: user.phoneNumber || '',
+    nationalId: user.nationalId || '',
+    joinDate: user.joinDate ? new Date(user.joinDate) : null
+  };
 
-  deleteUser(user: User): void {
-    this.confirm.confirm({
-      message: `Delete user <strong>${user.name}</strong>?`,
-      header: 'Confirm Delete',
-      icon: 'pi pi-exclamation-triangle',
-      acceptButtonStyleClass: 'p-button-danger',
-      accept: () => {
-        this.userService.delete(user.id).subscribe({
-          next: res => { if (res.success) { this.toast.add({ severity: 'success', summary: 'Deleted', detail: 'User removed.' }); this.loadUsers(); } },
-          error: () => this.toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete.' })
-        });
-      }
-    });
-  }
+  this.showDialog = true;
 }
 
+saveUser(): void {
+  if (!this.form.name || !this.form.email || !this.form.phoneNumber || !this.form.joinDate) {
+    this.toast.add({ severity: 'warn', summary: 'Required', detail: 'All fields are required.' });
+    return;
+  }
+
+  this.saving.set(true);
+
+  const formData = new FormData();
+  formData.append('name', this.form.name);
+  formData.append('email', this.form.email);
+  formData.append('phoneNumber', this.form.phoneNumber);
+  formData.append('nationalId', this.form.nationalId || '');
+
+  if (this.form.joinDate) {
+    const date = this.form.joinDate as Date;
+    const formatted =
+      date.getFullYear() + '-' +
+      String(date.getMonth() + 1).padStart(2, '0') + '-' +
+      String(date.getDate()).padStart(2, '0');
+    formData.append('joinDate', formatted);
+  }
+
+  if (this.selectedFile && this.documentType) {
+    formData.append('documentFile', this.selectedFile);
+    formData.append('documentType', this.documentType);
+  }
+
+  // ✅ Branch: create vs update
+  const request$ = this.editMode()
+    ? this.userService.update(this.editId, formData)
+    : this.userService.create(formData);
+
+  request$.subscribe({
+    next: (res: any) => {
+      this.saving.set(false);
+      if (res.success) {
+        this.showDialog = false;
+        this.toast.add({
+          severity: 'success',
+          summary: 'Saved',
+          detail: this.editMode() ? 'User updated' : 'User created'
+        });
+        this.loadUsers();
+      } else {
+        this.toast.add({ severity: 'error', summary: 'Error', detail: res.message });
+      }
+    },
+    error: (err: any) => {
+      this.saving.set(false);
+      this.toast.add({
+        severity: 'error',
+        summary: 'Error',
+        detail: err.error?.message ?? 'Operation failed.'
+      });
+    }
+  });
+}
+
+  edituserandcar(user: User): void {
+    this.router.navigate([`/create-user-car/${user.id}`]);
+}
+
+goToCreateUserCar(): void {
+  this.router.navigate(['/create-user-car']);
+}
+}

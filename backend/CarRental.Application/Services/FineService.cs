@@ -150,15 +150,19 @@ public class FineService : IFineService
     }
 
     public async Task<PagedResult<FineDetailsDto>> SearchAsync(
-    string? violationNumber,
-    bool? isPaid,
-    int page,
-    int pageSize)
+        string? violationNumber,
+        string? carPlate, // ✅ NEW
+        bool? isPaid,
+        int page,
+        int pageSize)
     {
         var query = _fineRepository.GetAll();
 
         if (!string.IsNullOrWhiteSpace(violationNumber))
             query = query.Where(x => x.ViolationNumber.Contains(violationNumber));
+
+        if (!string.IsNullOrWhiteSpace(carPlate)) // ✅ NEW
+            query = query.Where(x => x.CarPlate.Contains(carPlate));
 
         if (isPaid.HasValue)
             query = query.Where(x => x.IsPaid == isPaid.Value);
