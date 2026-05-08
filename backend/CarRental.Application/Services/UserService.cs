@@ -24,16 +24,34 @@ public class UserService : IUserService
     {
         var users = await _userRepository
             .GetAll()
-            .Select(u => new UserDto(u.Id, u.Name, u.PhoneNumber, u.Email,u.NationalId,u.DateOfPayment,u.JoinDate))
+            .Include(x => x.Documents)
+            .Select(u => new UserDto(
+                u.Id,
+                u.Name,
+                u.PhoneNumber,
+                u.Email,
+                u.NationalId,
+                u.DateOfPayment,
+                u.JoinDate,
+
+                u.Documents.Select(d => new UserDocumentDto(
+                    d.Id,
+                    d.UserId,
+                    d.DocumentType.ToString(),
+                    d.FileName,
+                    d.ContentType,
+                    d.FileSizeBytes,
+                    d.UploadedAt
+                )).ToList()
+            ))
             .ToListAsync();
 
         return users;
     }
-
     public async Task<UserDto?> GetUserByIdAsync(Guid id)
     {
         var user = await _userRepository.GetByIdAsync(id);
-        return user == null ? null : new UserDto(user.Id, user.Name, user.PhoneNumber, user.Email,user.NationalId ,user.DateOfPayment , user.JoinDate);
+        return user == null ? null : new UserDto(user.Id, user.Name, user.PhoneNumber, user.Email,user.NationalId ,user.DateOfPayment , user.JoinDate,null);
     }
 
     public async Task<UserDto> CreateUserWithCarAsync(CreateUserWithCarDto dto)
@@ -60,8 +78,22 @@ public class UserService : IUserService
         };
         await _carRepository.AddAsync(car);
 
+        if (dto.DocumentFiles != null &&
+    dto.DocumentTypes != null &&
+    dto.DocumentFiles.Count == dto.DocumentTypes.Count)
+        {
+            for (int i = 0; i < dto.DocumentFiles.Count; i++)
+            {
+                await _documentService.UploadDocumentAsync(
+                    user.Id,
+                    dto.DocumentFiles[i],
+                    dto.DocumentTypes[i]
+                );
+            }
+        }
+
         await _unitOfWork.SaveChangesAsync();
-        return new UserDto(user.Id, user.Name, user.PhoneNumber, user.Email, user.NationalId, user.DateOfPayment, user.JoinDate);
+        return new UserDto(user.Id, user.Name, user.PhoneNumber, user.Email, user.NationalId, user.DateOfPayment, user.JoinDate,null);
     }
 
     public async Task UpdateUserAsync(Guid id, UpdateUserDto dto)
@@ -87,105 +119,202 @@ public class UserService : IUserService
     {
         try
         {
-            //first get the user
-            User user = await _userRepository.GetByIdAsync(dto.UserId) ?? throw new KeyNotFoundException("user doesnt exist");
+            // ── Get user ─────────────────────────────
+            var user = await _userRepository.GetByIdAsync(dto.UserId)
+                ?? throw new KeyNotFoundException("user doesnt exist");
 
-            //find the car
-            Car car = await _carRepository.GetAll().Where(x => x.CarPlate == dto.CarPlate).FirstOrDefaultAsync();
-            if (car==null)
+            // ── Get car ──────────────────────────────
+            var car = await _carRepository.GetAll()
+                .FirstOrDefaultAsync(x => x.CarPlate == dto.CarPlate);
+
+            // ── CREATE or UPDATE CAR (UPSERT) ────────
+            if (car == null)
             {
+                car = new Car
+                {
+                    CarPlate = dto.CarPlate,
+                    Brand = dto.Brand,
+                    Model = dto.Model,
+                    RentalPrice = dto.RentalPrice,
+                    ChassisNumber = dto.ChassisNumber,
+                    Year = dto.Year,
+                    UserId = dto.UserId
+                };
 
-                throw new Exception("the car doesnt exist");
-
+                await _carRepository.AddAsync(car);
             }
-            user.DateOfPayment = dto.DateOfPayment;
-            user.Name=dto.Name;
-            user.PhoneNumber =dto.PhoneNumber;
+            else
+            {
+                car.UserId = dto.UserId;
+                car.ChassisNumber = dto.ChassisNumber;
+                car.CarPlate = dto.CarPlate;
+                car.RentalPrice = dto.RentalPrice;
+                car.Brand = dto.Brand;
+                car.Model = dto.Model;
+                car.Year = dto.Year;
+            }
+
+            // ── UPDATE USER ──────────────────────────
+            user.Name = dto.Name;
+            user.PhoneNumber = dto.PhoneNumber;
             user.NationalId = dto.NationalId;
-            user.Email=dto.Email;
-            
-            car.UserId = dto.UserId;
-            car.ChassisNumber = dto.ChassisNumber;
-            car.CarPlate = dto.CarPlate;
-            car.RentalPrice = dto.RentalPrice;
-            car.Brand = dto.Brand;
-            car.Model = dto.Model;
-            car.Year = dto.Year;
+            user.Email = dto.Email;
+            user.DateOfPayment = dto.DateOfPayment;
+
+            // ── DOCUMENT SYNC ────────────────────────
+            var existingDocs = (await _documentService.GetUserDocumentsAsync(dto.UserId)).ToList();
+
+            var keptIds = dto.ExistingDocumentIds?.ToHashSet() ?? new HashSet<Guid>();
+
+            foreach (var doc in existingDocs)
+            {
+                if (!keptIds.Contains(doc.Id))
+                {
+                    await _documentService.DeleteDocumentAsync(doc.Id);
+                }
+            }
+
+            if (dto.DocumentFiles != null &&
+                dto.DocumentTypes != null &&
+                dto.DocumentFiles.Count == dto.DocumentTypes.Count)
+            {
+                for (int i = 0; i < dto.DocumentFiles.Count; i++)
+                {
+                    await _documentService.UploadDocumentAsync(
+                        dto.UserId,
+                        dto.DocumentFiles[i],
+                        dto.DocumentTypes[i]
+                    );
+                }
+            }
+
+            await _unitOfWork.SaveChangesAsync();
+        }
+        catch
+        {
+            throw;
+        }
+    }
+    public async Task<UserDto> CreateUserWithOptionalDocumentAsync(CreateUserWithOptionalDocumentDto dto)
+    {
+        try
+        {
+            var user = new User
+            {
+                Id = Guid.NewGuid(),
+                Name = dto.Name,
+                PhoneNumber = dto.PhoneNumber,
+                Email = dto.Email,
+                NationalId = dto.NationalId,
+                DateOfPayment = dto.DateOfPayment,
+                JoinDate = dto.JoinDate
+            };
+
+            await _userRepository.AddAsync(user);
+
+
+            // ✅ OPTIONAL DOCUMENT
+            if (dto.DocumentFiles != null &&
+                dto.DocumentTypes != null &&
+                dto.DocumentFiles.Count == dto.DocumentTypes.Count)
+            {
+                for (int i = 0; i < dto.DocumentFiles.Count; i++)
+                {
+                    await _documentService.UploadDocumentAsync(
+                        user.Id,
+                        dto.DocumentFiles[i],
+                        dto.DocumentTypes[i]
+                    );
+                }
+            }
 
             await _unitOfWork.SaveChangesAsync();
 
+            return new UserDto(user.Id, user.Name, user.PhoneNumber, user.Email, user.NationalId, user.DateOfPayment, user.JoinDate, null);
         }
         catch (Exception ex)
         {
-        }
-    }
-
-    public async Task<UserDto> CreateUserWithOptionalDocumentAsync(CreateUserWithOptionalDocumentDto dto)
-    {
-        var user = new User
-        {
-            Id = Guid.NewGuid(),
-            Name = dto.Name,
-            PhoneNumber = dto.PhoneNumber,
-            Email = dto.Email,
-            NationalId = dto.NationalId,
-            DateOfPayment = dto.DateOfPayment,
-            JoinDate = dto.JoinDate
-        };
-
-        await _userRepository.AddAsync(user);
-
-
-        // ✅ OPTIONAL DOCUMENT
-        if (dto.DocumentFile != null && dto.DocumentType.HasValue)
-        {
-            await _documentService.UploadDocumentAsync(
-                user.Id,
-                dto.DocumentFile,
-                dto.DocumentType.Value
-            );
+            return null;
         }
 
-        await _unitOfWork.SaveChangesAsync();
-
-        return new UserDto(user.Id, user.Name, user.PhoneNumber, user.Email ,user.NationalId , user.DateOfPayment,user.JoinDate);
     }
 
     public async Task<UserDto> UpdateUserWithDocumentAsync(Guid id, UpdateUserWithDocumentDto dto)
     {
-        var user = await _userRepository.GetByIdAsync(id)
-            ?? throw new KeyNotFoundException($"User '{id}' not found.");
+        try
+        {
+            var user = await _userRepository.GetByIdAsync(id)
+    ?? throw new KeyNotFoundException($"User '{id}' not found.");
 
-        user.Name = dto.Name;
-        user.Email = dto.Email;
-        user.PhoneNumber = dto.PhoneNumber;
-        user.NationalId = dto.NationalId;
-        if (dto.JoinDate.HasValue)
-            user.JoinDate = dto.JoinDate.Value;
+            // ── Update user fields ─────────────────────────────
+            user.Name = dto.Name;
+            user.Email = dto.Email;
+            user.PhoneNumber = dto.PhoneNumber;
+            user.NationalId = dto.NationalId;
 
-        await _userRepository.UpdateAsync(user);
-        await _unitOfWork.SaveChangesAsync();
-        if (dto.DocumentFile != null && dto.DocumentType.HasValue)
-            await _documentService.UploadDocumentAsync(id, dto.DocumentFile, dto.DocumentType.Value);
+            if (dto.JoinDate.HasValue)
+                user.JoinDate = dto.JoinDate.Value;
 
-        return new UserDto(
-         Id: user.Id,
-         Name: user.Name,
-         PhoneNumber: user.PhoneNumber,
-         Email: user.Email,
-         NationalId: user.NationalId,
-         DateOfPayment: user.DateOfPayment,
-         JoinDate: user.JoinDate
-     );
+            user.DateOfPayment = dto.DateOfPayment;
+
+            await _userRepository.UpdateAsync(user);
+
+            // ── Get existing documents ─────────────────────────
+            var existingDocs = (await _documentService.GetUserDocumentsAsync(id)).ToList();
+
+            var keptIds = (dto.ExistingDocumentIds ?? new List<Guid>())
+                .ToHashSet();
+
+            // ── Delete removed documents ───────────────────────
+            foreach (var doc in existingDocs)
+            {
+                if (!keptIds.Contains(doc.Id))
+                {
+                    await _documentService.DeleteDocumentAsync(doc.Id);
+                }
+            }
+
+            // ── Upload new documents ───────────────────────────
+            if (dto.DocumentFiles != null &&
+                dto.DocumentTypes != null &&
+                dto.DocumentFiles.Count == dto.DocumentTypes.Count)
+            {
+                for (int i = 0; i < dto.DocumentFiles.Count; i++)
+                {
+                    await _documentService.UploadDocumentAsync(
+                        id,
+                        dto.DocumentFiles[i],
+                        dto.DocumentTypes[i]
+                    );
+                }
+            }
+
+            await _unitOfWork.SaveChangesAsync(); // ✅ FIXED
+
+            return new UserDto(
+                Id: user.Id,
+                Name: user.Name,
+                PhoneNumber: user.PhoneNumber,
+                Email: user.Email,
+                NationalId: user.NationalId,
+                DateOfPayment: user.DateOfPayment,
+                JoinDate: user.JoinDate,
+                null
+            );
+        }
+        catch (Exception ex)
+        {
+            return null;
+        }
+
     }
-
-    public async Task<CreateUserWithCarDto?> GetUserWithCarAsync(Guid userId)
+    public async Task<UserWithCarDto?> GetUserWithCarAsync(Guid userId)
     {
         var user = await _userRepository
             .GetAll()
+            .Include(u => u.Documents)
             .Where(u => u.Id == userId)
-            .Select(u => new
-            {
+            .Select(u => new UserWithCarDto(
                 u.Id,
                 u.Name,
                 u.PhoneNumber,
@@ -193,30 +322,30 @@ public class UserService : IUserService
                 u.NationalId,
                 u.DateOfPayment,
                 u.JoinDate,
-                Car = _carRepository
-                        .GetAll()
-                        .AsNoTracking()
-                        .FirstOrDefault(c => c.UserId == u.Id)
-            }).AsNoTracking()
+
+                u.Cars
+                    .Select(c => new CarDtoo(
+                        c.CarPlate,
+                        c.Brand,
+                        c.Model,
+                        c.Year,
+                        c.RentalPrice,
+                        c.ChassisNumber
+                    ))
+                    .FirstOrDefault(),
+
+                u.Documents.Select(d => new UserDocumentDto(
+                    d.Id,
+                    d.UserId,
+                    d.DocumentType.ToString(),
+                    d.FileName,
+                    d.ContentType,
+                    d.FileSizeBytes,
+                    d.UploadedAt
+                )).ToList()
+            ))
             .FirstOrDefaultAsync();
 
-        if (user == null || user.Car == null)
-            return null;
-
-        return new CreateUserWithCarDto(
-            user.Name,
-            user.PhoneNumber,
-            user.Email,
-            user.NationalId,
-            user.DateOfPayment,
-            user.Car.CarPlate,
-            user.Car.Brand,
-            user.Car.Model,
-            user.Car.Year ?? 0,
-            user.Car.RentalPrice,
-            user.Car.ChassisNumber,
-            user.Id,
-            user.JoinDate
-        );
+        return user;
     }
 }

@@ -61,6 +61,7 @@ export interface CarSummaryDto {
   rentalPrice: number;
   rows: CarMonthlyRowDto[];
   joinDate: string | null;
+  userName:string
 }
 export interface MonthlyRentalPaymentDto {
   id: string;
@@ -142,4 +143,5 @@ export interface SystemMonthlyRowDto {
 
   totalEntranceFees: number;
   entranceFeesCount: number;
+  usersCount:number
 }

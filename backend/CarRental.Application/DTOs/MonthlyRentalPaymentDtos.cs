@@ -28,7 +28,9 @@ namespace CarRental.Application.DTOs
         int? CarYear,              // manufacturing year — avoids clash with row Year
         decimal RentalPrice,
         List<CarMonthlyRowDto> Rows,
-        DateOnly? JoinDate
+        DateOnly? JoinDate,
+        string UserName
+    
     );
 
 
@@ -65,7 +67,8 @@ namespace CarRental.Application.DTOs
     decimal TotalFines,
     decimal TotalEntranceFees,
     int FinesCount,
-    int EntranceFeesCount
+    int EntranceFeesCount,
+    int UsersCount
 );
 
 

@@ -13,7 +13,7 @@ bld/
 [Oo]bj/
 [Ll]og/
 [Ll]ogs/
-
+backend/CarRental.API/uploads
 # Visual Studio
 .vs/
 *.user

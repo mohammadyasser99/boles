@@ -41,42 +41,97 @@
 </div>
 
 <p-dialog [header]="editMode() ? 'Edit Payment' : 'Add Payment'" [(visible)]="showDialog" [modal]="true" [style]="{width:'450px'}">
-  <div class="space-y-4 pt-2">
+  <form [formGroup]="form" class="space-y-4 pt-2">
+
     @if (!editMode()) {
+  
+      <!-- User -->
       <div class="space-y-1.5">
-        <label class="text-xs font-display font-600 text-surface-500 uppercase tracking-wider">User *</label>
-        <p-dropdown [options]="userOptions()" [(ngModel)]="form.userId" optionLabel="label" optionValue="value"
-          placeholder="Select user" appendTo="body" class="w-full"></p-dropdown>
+        <label class="text-xs font-display font-600 text-surface-500 uppercase">
+          User *
+        </label>
+  
+        <p-dropdown
+          [options]="userOptions()"
+          formControlName="userId"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Select user"
+          appendTo="body"
+          class="w-full">
+        </p-dropdown>
       </div>
-
+  
+      <!-- Car -->
       <div class="space-y-1.5">
-        <label class="text-xs font-display font-600 text-surface-500 uppercase tracking-wider">Car Plate *</label>
-        <p-dropdown [options]="carOptions()" [(ngModel)]="form.carPlate" optionLabel="label" optionValue="value"
-          placeholder="Select car" appendTo="body" class="w-full"></p-dropdown>
+        <label class="text-xs font-display font-600 text-surface-500 uppercase">
+          Car Plate *
+        </label>
+  
+        <p-dropdown
+          [options]="carOptions()"
+          formControlName="carPlate"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Select car"
+          appendTo="body"
+          class="w-full">
+        </p-dropdown>
       </div>
+  
     }
-
+  
+    <!-- Amount -->
     <div class="space-y-1.5">
-      <label class="text-xs font-display font-600 text-surface-500 uppercase tracking-wider">Amount *</label>
-      <p-inputNumber [(ngModel)]="form.amount" [min]="0" [minFractionDigits]="2"
-        styleClass="w-full" inputStyleClass="w-full !rounded-xl"></p-inputNumber>
+      <label class="text-xs font-display font-600 text-surface-500 uppercase">
+        Amount *
+      </label>
+  
+      <p-inputNumber
+        formControlName="amount"
+        [min]="0"
+        [minFractionDigits]="2"
+        styleClass="w-full"
+        inputStyleClass="w-full !rounded-xl">
+      </p-inputNumber>
+  
+      <small class="text-red-500 text-xs"
+        *ngIf="form.get('amount')?.touched && form.get('amount')?.invalid">
+        Amount is required
+      </small>
     </div>
-
+  
+    <!-- Paid At -->
     <div class="space-y-1.5">
-      <label class="text-xs font-display font-600 text-surface-500 uppercase tracking-wider">Paid At *</label>
+      <label class="text-xs font-display font-600 text-surface-500 uppercase">
+        Paid At *
+      </label>
+  
       <p-calendar
-      [(ngModel)]="form.paidAt"
-      dateFormat="yy-mm-dd"
-      [showIcon]="true"
-      appendTo="body"
-      [panelStyle]="{ transform: 'scale(0.85)', transformOrigin: 'top left' }">
-    </p-calendar>
+        formControlName="paidAt"
+        dateFormat="yy-mm-dd"
+        [showIcon]="true"
+        appendTo="body">
+      </p-calendar>
+  
+      <small class="text-red-500 text-xs"
+        *ngIf="form.get('paidAt')?.touched && form.get('paidAt')?.invalid">
+        Paid date is required
+      </small>
     </div>
-  </div>
+  
+  </form>
 
   <ng-template pTemplate="footer">
     <button pButton label="Cancel" class="!p-button-text !rounded-xl" (click)="showDialog=false"></button>
-    <button pButton [label]="editMode() ? 'Update' : 'Create'" icon="pi pi-check" [loading]="saving()"
-      class="!bg-brand-600 !border-brand-600 !rounded-xl !font-display !font-700" (click)="save()"></button>
+    <button 
+    pButton 
+    [label]="editMode() ? 'Update' : 'Create'" 
+    icon="pi pi-check"
+    [loading]="saving()" 
+    [disabled]="form.invalid"
+    class="!bg-brand-600 !border-brand-600 !rounded-xl !font-display !font-700"
+    (click)="save()">
+  </button>
   </ng-template>
 </p-dialog>

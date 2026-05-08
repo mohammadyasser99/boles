@@ -1,6 +1,7 @@
 using CarRental.Application.Common;
 using CarRental.Application.DTOs;
 using CarRental.Application.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CarRental.API.Controllers;

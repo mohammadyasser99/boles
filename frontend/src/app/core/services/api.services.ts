@@ -26,7 +26,17 @@ export class UserService {
   updateCarAndUser(req: any): Observable<ApiResponse<User>> { return this.http.post<ApiResponse<User>>(`${this.base}/UpdateCarAndUser`, req); }
 update(id: string, formData: FormData): Observable<ApiResponse<User>> {
   return this.http.put<ApiResponse<User>>(`${this.base}/${id}/update`, formData);
-}  delete(id: string): Observable<ApiResponse<void>> { return this.http.delete<ApiResponse<void>>(`${this.base}/${id}`); }
+}  
+delete(id: string): Observable<ApiResponse<void>> { return this.http.delete<ApiResponse<void>>(`${this.base}/${id}`); }
+
+downloadDocument(documentId: string): Observable<Blob> {
+  return this.http.get(
+    `${environment.apiUrl}/users/documents/${documentId}/download`,
+    {
+      responseType: 'blob'
+    }
+  );
+}
 }
 
 // ── Car Service ───────────────────────────────────────────────────────────────

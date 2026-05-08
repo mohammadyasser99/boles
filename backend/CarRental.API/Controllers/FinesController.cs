@@ -8,7 +8,7 @@ namespace CarRental.API.Controllers;
 
 [ApiController]
 [Route("api/fines")]
-//[Authorize]
+[Authorize]
 public class FinesController : ControllerBase
 {
     private readonly IFineService _fineService;

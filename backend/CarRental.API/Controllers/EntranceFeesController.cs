@@ -1,12 +1,15 @@
 ﻿using CarRental.Application.Common;
 using CarRental.Application.DTOs;
 using CarRental.Application.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CarRental.API.Controllers
 {
     [ApiController]
     [Route("api/entrance-fees")]
+    [Authorize]
+
     public class EntranceFeesController : ControllerBase
     {
         private readonly IEntranceFeeService _entranceFeeService;

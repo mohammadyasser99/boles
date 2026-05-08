@@ -22,7 +22,7 @@ private paymentService = inject(PaymentService)
   loading = signal(true);
   debts = signal<CarDebt[]>([]);
   cars = signal<Car[]>([]);
-  users = signal<User[]>([]);
+  users = signal(0);
   systemSummary = signal<SystemMonthlyRowDto | null>(null);
 
   totalRevenue = signal(0);
@@ -54,6 +54,7 @@ private paymentService = inject(PaymentService)
         this.totalEntranceFees.set(data.totalEntranceFees);
         this.finesCount.set(data.finesCount);
         this.entranceFeesCount.set(data.entranceFeesCount);
+        this.users.set(data.usersCount)
       }
   
       this.loading.set(false);

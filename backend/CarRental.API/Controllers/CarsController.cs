@@ -8,7 +8,7 @@ namespace CarRental.API.Controllers;
 
 [ApiController]
 [Route("api/cars")]
-//[Authorize]
+[Authorize]
 public class CarsController : ControllerBase
 {
     private readonly ICarService _carService;

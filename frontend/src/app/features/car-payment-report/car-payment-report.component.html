@@ -12,6 +12,16 @@
             {{ s.carYear }} · Base:
             <span class="text-surface-700 font-600">{{ fmt(s.rentalPrice) }}</span>
           </p>
+
+          <p class="text-surface-400 text-sm mt-1">
+            Join Date :
+            <span class="text-surface-700 font-600">{{ s.joinDate }}</span>
+          </p>
+
+          <p class="text-surface-400 text-sm mt-1">
+           Username :
+            <span class="text-surface-700 font-600">{{ s.userName }}</span>
+          </p>
         } @else {
           <h1 class="font-display font-800 text-surface-800 text-2xl">
             Monthly Summary

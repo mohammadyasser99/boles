@@ -1,4 +1,5 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
+import { ReactiveFormsModule, FormBuilder, Validators, FormGroup } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { UserService } from '../../core/services/api.services';
@@ -31,7 +32,8 @@ import { Router } from '@angular/router';
     AvatarModule,
     TooltipModule,
     DropdownModule,
-    CalendarModule
+    CalendarModule,
+    ReactiveFormsModule
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './users.component.html',
@@ -42,7 +44,8 @@ export class UsersComponent implements OnInit {
   private toast = inject(MessageService);
   private confirm = inject(ConfirmationService);
   private router = inject(Router);
-
+  existingDocument: any = null;
+  downloading = signal(false);
   users = signal<User[]>([]);
   loading = signal(true);
   saving = signal(false);
@@ -51,19 +54,42 @@ export class UsersComponent implements OnInit {
   editMode = signal(false);
   editId = '';
 
-  form: any = {
-    name: '',
-    email: '',
-    phoneNumber: '',
-    nationalId: '',
-    joinDate: null
-  };
+  private fb = inject(FormBuilder);
 
-  selectedFile: File | null = null;
-  documentType: string = '';
+  userForm!: FormGroup;
+
+  documents: {
+    id?: string;
+    file: File | null;
+    fileName?: string;
+    type: string;
+    existing?: boolean;
+  }[] = [];
 
   ngOnInit(): void {
+    this.initForm();
     this.loadUsers();
+  }
+  addDocument(): void {
+    this.documents.push({
+      file: null,
+      type: ''
+    });
+  }
+  
+  removeDocument(index: number): void {
+    this.documents.splice(index, 1);
+  }
+
+  initForm(): void {
+    this.userForm = this.fb.group({
+      name: ['', Validators.required],
+      email: ['', [Validators.required, Validators.email]],
+      phoneNumber: ['', Validators.required],
+      nationalId: ['', Validators.required],
+      joinDate: [null, Validators.required],
+      dateOfPayment :[null]
+    });
   }
 
   loadUsers(): void {
@@ -77,93 +103,164 @@ export class UsersComponent implements OnInit {
     });
   }
 
-  onFileSelected(event: any): void {
-    this.selectedFile = event.target.files[0];
-  }
+onFileSelected(event: any, index: number): void {
+  const file = event.target.files?.[0] ?? null;
+
+  this.documents[index].file = file;
+}
 
   openCreate(): void {
     this.editMode.set(false);
-    this.form = {
+  
+    this.userForm.reset({
       name: '',
       email: '',
-      phoneNumber: ''
-    };
+      phoneNumber: '',
+      nationalId: '',
+      joinDate: null,
+      dateOfPayment:null
+    });
+  
+    this.documents = [];
+  
     this.showDialog = true;
   }
 
-openEdit(user: any): void {
-  this.editMode.set(true);
-  this.editId = user.id;
-
-  this.form = {
-    name: user.name || '',
-    email: user.email || '',
-    phoneNumber: user.phoneNumber || '',
-    nationalId: user.nationalId || '',
-    joinDate: user.joinDate ? new Date(user.joinDate) : null
-  };
-
-  this.showDialog = true;
-}
-
-saveUser(): void {
-  if (!this.form.name || !this.form.email || !this.form.phoneNumber || !this.form.joinDate) {
-    this.toast.add({ severity: 'warn', summary: 'Required', detail: 'All fields are required.' });
-    return;
+  openEdit(user: any): void {
+    this.editMode.set(true);
+    this.editId = user.id;
+  
+    this.userForm.patchValue({
+      name: user.name || '',
+      email: user.email || '',
+      phoneNumber: user.phoneNumber || '',
+      nationalId: user.nationalId || '',
+      joinDate: user.joinDate ? new Date(user.joinDate) : null,
+      dateOfPayment: user.dateOfPayment
+        ? new Date(user.dateOfPayment)
+        : null
+    });
+  
+    this.documents = (user.documents || []).map((d: any) => ({
+      id: d.id,
+      file: null,
+      fileName: d.fileName,
+      type: d.documentType,
+      existing: true
+    }));
+  
+    this.showDialog = true;
   }
+  downloadDocument(documentId: string, fileName: string): void {
 
-  this.saving.set(true);
-
-  const formData = new FormData();
-  formData.append('name', this.form.name);
-  formData.append('email', this.form.email);
-  formData.append('phoneNumber', this.form.phoneNumber);
-  formData.append('nationalId', this.form.nationalId || '');
-
-  if (this.form.joinDate) {
-    const date = this.form.joinDate as Date;
-    const formatted =
-      date.getFullYear() + '-' +
-      String(date.getMonth() + 1).padStart(2, '0') + '-' +
-      String(date.getDate()).padStart(2, '0');
-    formData.append('joinDate', formatted);
-  }
-
-  if (this.selectedFile && this.documentType) {
-    formData.append('documentFile', this.selectedFile);
-    formData.append('documentType', this.documentType);
-  }
-
-  // ✅ Branch: create vs update
-  const request$ = this.editMode()
-    ? this.userService.update(this.editId, formData)
-    : this.userService.create(formData);
-
-  request$.subscribe({
-    next: (res: any) => {
-      this.saving.set(false);
-      if (res.success) {
-        this.showDialog = false;
-        this.toast.add({
-          severity: 'success',
-          summary: 'Saved',
-          detail: this.editMode() ? 'User updated' : 'User created'
-        });
-        this.loadUsers();
-      } else {
-        this.toast.add({ severity: 'error', summary: 'Error', detail: res.message });
-      }
-    },
-    error: (err: any) => {
-      this.saving.set(false);
-      this.toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: err.error?.message ?? 'Operation failed.'
+    this.downloading.set(true);
+  
+    this.userService
+      .downloadDocument(documentId)
+      .subscribe({
+        next: blob => {
+  
+          const url = window.URL.createObjectURL(blob);
+  
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = fileName;
+  
+          a.click();
+  
+          window.URL.revokeObjectURL(url);
+  
+          this.downloading.set(false);
+        },
+        error: () => {
+  
+          this.downloading.set(false);
+  
+          this.toast.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'Failed to download document'
+          });
+        }
       });
+  }
+  saveUser(): void {
+    if (this.userForm.invalid) {
+      this.userForm.markAllAsTouched();
+      return;
     }
-  });
-}
+  
+    this.saving.set(true);
+  
+    const formValue = this.userForm.value;
+  
+    const formData = new FormData();
+    formData.append('name', formValue.name);
+    formData.append('email', formValue.email);
+    formData.append('phoneNumber', formValue.phoneNumber);
+    formData.append('nationalId', formValue.nationalId || '');
+  
+    if (formValue.joinDate) {
+      const date = formValue.joinDate as Date;
+      const formatted =
+        date.getFullYear() + '-' +
+        String(date.getMonth() + 1).padStart(2, '0') + '-' +
+        String(date.getDate()).padStart(2, '0');
+  
+      formData.append('joinDate', formatted);
+    }
+  
+    if (formValue.dateOfPayment) {
+      const date = formValue.dateOfPayment as Date;
+      const formatted =
+        date.getFullYear() + '-' +
+        String(date.getMonth() + 1).padStart(2, '0') + '-' +
+        String(date.getDate()).padStart(2, '0');
+  
+      formData.append('dateOfPayment', formatted);
+    }
+
+    for (const doc of this.documents) {
+
+      // existing document
+      if (doc.existing && doc.id) {
+        formData.append('existingDocumentIds', doc.id);
+      }
+    
+      // new document
+      if (doc.file && doc.type) {
+        formData.append('documentFiles', doc.file);
+        formData.append('documentTypes', doc.type);
+      }
+    }
+  
+    const request$ = this.editMode()
+      ? this.userService.update(this.editId, formData)
+      : this.userService.create(formData);
+  
+    request$.subscribe({
+      next: (res: any) => {
+        this.saving.set(false);
+        if (res.success) {
+          this.showDialog = false;
+          this.toast.add({
+            severity: 'success',
+            summary: 'Saved',
+            detail: this.editMode() ? 'User updated' : 'User created'
+          });
+          this.loadUsers();
+        }
+      },
+      error: (err: any) => {
+        this.saving.set(false);
+        this.toast.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: err.error?.message ?? 'Operation failed.'
+        });
+      }
+    });
+  }
 
   edituserandcar(user: User): void {
     this.router.navigate([`/create-user-car/${user.id}`]);

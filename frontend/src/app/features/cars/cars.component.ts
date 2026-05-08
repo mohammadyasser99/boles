@@ -1,4 +1,5 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
+import { ReactiveFormsModule, FormBuilder, Validators, FormGroup } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CarService, UserService } from '../../core/services/api.services';
@@ -20,7 +21,7 @@ import { Router } from '@angular/router';
   standalone: true,
   imports: [CommonModule, FormsModule, TableModule, ButtonModule, DialogModule,
     InputTextModule, InputNumberModule, DropdownModule, TagModule, ToastModule,
-    ConfirmDialogModule, TooltipModule],
+    ConfirmDialogModule, TooltipModule,ReactiveFormsModule],
 providers: [MessageService, ConfirmationService] ,
   templateUrl: './cars.component.html',
   styleUrl: './cars.component.css'
@@ -52,9 +53,25 @@ newChassisNumber = '';
   rentalPriceValue: number | null = null;
   userOptions = signal<{label: string, value: string}[]>([]);
 
+  private fb = inject(FormBuilder);
+
+carForm!: FormGroup;
+
   ngOnInit(): void {
+    this.initForm();
     this.loadCars();
     this.loadUsers();
+  }
+
+  initForm(): void {
+    this.carForm = this.fb.group({
+      carPlate: ['', Validators.required],
+      brand: [''],
+      model: [''],
+      year: [null],
+      chassisNumber: [''],
+      rentalPrice: [0]
+    });
   }
 
  loadCars(): void {
@@ -97,23 +114,59 @@ loadUsers(): void {
   });
 }
 
-  openCreate(): void { this.newPlate = ''; this.newRentalPrice = null; this.showCreate = true; }
+openCreate(): void {
+  this.carForm.reset({
+    carPlate: '',
+    brand: '',
+    model: '',
+    year: null,
+    chassisNumber: '',
+    rentalPrice: 0
+  });
 
-  createCar(): void {
-    if (!this.newPlate.trim()) { this.toast.add({ severity: 'warn', summary: 'Required', detail: 'Car plate is required.' }); return; }
-    this.saving.set(true);
-    this.carService.create({ carPlate: this.newPlate.trim(), rentalPrice: this.newRentalPrice ?? 0 , brand: this.newBrand,
-  model: this.newModel,
-  year: this.newYear,
-  chassisNumber: this.newChassisNumber}).subscribe({
-      next: res => {
-        this.saving.set(false);
-        if (res.success) { this.showCreate = false; this.toast.add({ severity: 'success', summary: 'Registered', detail: `Car ${this.newPlate} added.` }); this.loadCars(); }
-        else this.toast.add({ severity: 'error', summary: 'Error', detail: res.message });
-      },
-      error: err => { this.saving.set(false); this.toast.add({ severity: 'error', summary: 'Error', detail: err.error?.message ?? 'Failed to create car.' }); }
-    });
+  this.showCreate = true;
+}
+createCar(): void {
+  if (this.carForm.invalid) {
+    this.carForm.markAllAsTouched();
+    return;
   }
+
+  this.saving.set(true);
+
+  const formValue = this.carForm.value;
+
+  this.carService.create({
+    carPlate: formValue.carPlate.trim(),
+    brand: formValue.brand,
+    model: formValue.model,
+    year: formValue.year,
+    chassisNumber: formValue.chassisNumber,
+    rentalPrice: formValue.rentalPrice ?? 0
+  }).subscribe({
+    next: res => {
+      this.saving.set(false);
+      if (res.success) {
+        this.showCreate = false;
+        this.toast.add({
+          severity: 'success',
+          summary: 'Registered',
+          detail: `Car ${formValue.carPlate} added.`
+        });
+        this.loadCars();
+      }
+    },
+    error: () => {
+      this.saving.set(false);
+      this.toast.add({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'Failed to create car.'
+      });
+    }
+  });
+}
+
 
   openAssign(car: Car): void { this.selectedCar.set(car); this.selectedUserId = car.userId ?? ''; this.showAssign = true; }
 

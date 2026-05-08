@@ -12,4 +12,6 @@ public class User
     public virtual ICollection<Car> Cars { get; set; } = new List<Car>();
     public virtual ICollection<MonthlyRentalPayment> MonthlyPayments { get; set; }
     = new List<MonthlyRentalPayment>();
+    public virtual ICollection<UserDocument> Documents { get; set; }
+    = new List<UserDocument>();
 }

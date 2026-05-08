@@ -1,4 +1,5 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
+import { ReactiveFormsModule, FormBuilder, Validators, FormGroup } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TableModule } from 'primeng/table';
@@ -24,7 +25,8 @@ import { MonthlyRentalPaymentDto } from 'src/app/core/models';
     InputNumberModule,
     DropdownModule,
     CalendarModule,
-    ToastModule
+    ToastModule ,
+    ReactiveFormsModule
   ],
   providers: [MessageService],
   templateUrl: './monthly-rental-payment.component.html',
@@ -47,17 +49,24 @@ export class MonthlyRentalPaymentComponent implements OnInit {
   userOptions = signal<{ label: string; value: string }[]>([]);
   carOptions = signal<{ label: string; value: string }[]>([]);
 
-  form: { userId: string; carPlate: string; amount: number | null; paidAt: Date | null } = {
-    userId: '',
-    carPlate: '',
-    amount: null,
-    paidAt: null,
-  };
+  private fb = inject(FormBuilder);
+
+  form!: FormGroup;
 
   ngOnInit(): void {
+    this.initForm();
     this.loadPayments();
     this.loadUsers();
     this.loadCars();
+  }
+
+  initForm() {
+    this.form = this.fb.group({
+      userId: [''],
+      carPlate: [''],
+      amount: [null, Validators.required],
+      paidAt: [null, Validators.required]
+    });
   }
 
   loadPayments(): void {
@@ -93,66 +102,88 @@ export class MonthlyRentalPaymentComponent implements OnInit {
   openCreate(): void {
     this.editMode.set(false);
     this.editId = '';
-    this.form = { userId: '', carPlate: '', amount: null, paidAt: null };
+  
+    this.form.reset({
+      userId: '',
+      carPlate: '',
+      amount: null,
+      paidAt: null
+    });
+  
     this.showDialog = true;
   }
-
   openEdit(payment: MonthlyRentalPaymentDto): void {
     this.editMode.set(true);
     this.editId = payment.id;
-    this.form = {
+  
+    this.form.patchValue({
       userId: payment.userId,
       carPlate: payment.carPlate,
       amount: payment.amount,
       paidAt: payment.paidAt ? new Date(payment.paidAt) : null
-    };
+    });
+  
     this.showDialog = true;
   }
 
-  save(): void {
-    if (!this.form.amount || !this.form.paidAt) {
-      this.toast.add({ severity: 'warn', summary: 'Required', detail: 'Amount and Paid Date are required.' });
-      return;
-    }
 
-    if (!this.editMode() && (!this.form.userId || !this.form.carPlate)) {
-      this.toast.add({ severity: 'warn', summary: 'Required', detail: 'User and Car are required for new payment.' });
-      return;
-    }
+save(): void {
+  if (this.form.invalid) {
+    this.form.markAllAsTouched();
+    return;
+  }
 
-    const paidAt = this.toDateOnly(this.form.paidAt);
-    this.saving.set(true);
+  const formValue = this.form.value;
 
-    const request$ = this.editMode()
-      ? this.paymentService.update(this.editId, { amount: this.form.amount, paidAt })
-      : this.paymentService.create({
-          amount: this.form.amount,
-          paidAt,
-          carPlate: this.form.carPlate,
-          userId: this.form.userId
+  if (!this.editMode() && (!formValue.userId || !formValue.carPlate)) {
+    this.toast.add({
+      severity: 'warn',
+      summary: 'Required',
+      detail: 'User and Car are required.'
+    });
+    return;
+  }
+
+  const paidAt = this.toDateOnly(formValue.paidAt);
+  this.saving.set(true);
+
+  const request$ = this.editMode()
+    ? this.paymentService.update(this.editId, {
+        amount: formValue.amount,
+        paidAt
+      })
+    : this.paymentService.create({
+        amount: formValue.amount,
+        paidAt,
+        carPlate: formValue.carPlate,
+        userId: formValue.userId
+      });
+
+  request$.subscribe({
+    next: res => {
+      this.saving.set(false);
+
+      if (res.success) {
+        this.toast.add({
+          severity: 'success',
+          summary: 'Saved',
+          detail: this.editMode() ? 'Payment updated' : 'Payment created'
         });
 
-    request$.subscribe({
-      next: res => {
-        this.saving.set(false);
-        if (res.success) {
-          this.toast.add({
-            severity: 'success',
-            summary: 'Saved',
-            detail: this.editMode() ? 'Payment updated successfully.' : 'Payment created successfully.'
-          });
-          this.showDialog = false;
-          this.loadPayments();
-        } else {
-          this.toast.add({ severity: 'error', summary: 'Error', detail: res.message || 'Operation failed.' });
-        }
-      },
-      error: err => {
-        this.saving.set(false);
-        this.toast.add({ severity: 'error', summary: 'Error', detail: err.error?.message ?? 'Operation failed.' });
+        this.showDialog = false;
+        this.loadPayments();
       }
-    });
-  }
+    },
+    error: () => {
+      this.saving.set(false);
+      this.toast.add({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'Operation failed.'
+      });
+    }
+  });
+}
 
   private toDateOnly(date: Date): string {
     const y = date.getFullYear();

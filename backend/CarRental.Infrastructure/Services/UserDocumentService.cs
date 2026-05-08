@@ -81,7 +81,7 @@ namespace CarRental.Infrastructure.Services
             };
 
             await _documentRepository.AddAsync(document);
-            await _documentRepository.SaveChanges();
+        //    await _documentRepository.SaveChanges();
             return ToDto(document);
         }
 

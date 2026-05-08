@@ -108,11 +108,11 @@ public class AppDbContext : DbContext
              .HasMaxLength(30);
 
             e.HasOne(d => d.User)
-             .WithMany()
-             .HasForeignKey(d => d.UserId)
-             .OnDelete(DeleteBehavior.Cascade);
+ .WithMany(u => u.Documents)
+ .HasForeignKey(d => d.UserId)
+ .OnDelete(DeleteBehavior.Cascade);
 
-            e.HasIndex(d => new { d.UserId, d.DocumentType }).IsUnique();
+            e.HasIndex(d => new { d.UserId, d.DocumentType });
         });
 
     }

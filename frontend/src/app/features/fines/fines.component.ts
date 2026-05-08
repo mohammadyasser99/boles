@@ -83,7 +83,9 @@ export class FinesComponent implements OnInit {
 
   resetFilters(): void {
     this.searchViolationNumber.set('');
+    this.searchCarPlate.set('');
     this.searchIsPaid.set(null);
+  
     this.page.set(1);
     this.loadFines();
   }

@@ -178,7 +178,8 @@ namespace CarRental.Application.Services
                 CarYear: car.Year,
                 RentalPrice: car.RentalPrice ?? 0,
                 Rows: rows,
-                JoinDate: car.User.JoinDate
+                JoinDate: car.User.JoinDate,
+                UserName:car.User.Name
             );
         }
 
@@ -230,6 +231,7 @@ namespace CarRental.Application.Services
 
         public async Task<SystemFinancialSummaryDto> GetSystemMonthlySummaryAsync()
         {
+            var userscount = await _userRepository.GetAll().CountAsync();
             var payments = await _paymentRepository
                 .GetAll()
                 .ToListAsync();
@@ -260,7 +262,8 @@ namespace CarRental.Application.Services
                 TotalFines: totalFines,
                 TotalEntranceFees: totalFees,
                 FinesCount: fines.Count,
-                EntranceFeesCount: fees.Count
+                EntranceFeesCount: fees.Count,
+                userscount
             );
         }
 

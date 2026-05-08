@@ -12,6 +12,6 @@ public interface IUserService
     Task ModifyUserAndCar(CreateUserWithCarDto dto);
     Task<UserDto> CreateUserWithOptionalDocumentAsync(CreateUserWithOptionalDocumentDto dto);
     Task<UserDto> UpdateUserWithDocumentAsync(Guid id, UpdateUserWithDocumentDto dto);
-    Task<CreateUserWithCarDto?> GetUserWithCarAsync(Guid userId);
+    Task<UserWithCarDto?> GetUserWithCarAsync(Guid userId);
 }
 

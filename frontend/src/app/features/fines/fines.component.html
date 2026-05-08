@@ -97,35 +97,55 @@
     <h3 class="font-display font-700 text-surface-800 text-base">Search Violations</h3>
 
     <!-- Filters -->
-    <div class="flex gap-3 pb-5">
+<!-- Filters -->
+<div class="flex gap-3 pb-5">
 
-      <!-- 🔽 Dropdown -->
-      <select
-        [(ngModel)]="selectedSearchType"
-        class="px-3 py-2 border border-surface-200 rounded-lg text-sm bg-white"
-      >
-        <option value="violation">Violation Number</option>
-        <option value="carPlate">Car Plate</option>
-      </select>
-    
-      <!-- 🔍 Input -->
-      <input
-      type="text"
-      placeholder="Search..."
-      [value]="selectedSearchType === 'violation' ? searchViolationNumber() : searchCarPlate()"
-      (input)="onSearchInput($any($event.target).value)"
-      class="flex-1 px-3 py-2 border border-surface-200 rounded-lg text-sm"
-    />
-    
-      <!-- 🔍 Search Button -->
-      <button
-        (click)="search()"
-        class="px-4 py-2 bg-red-600 text-white rounded-lg text-sm"
-      >
-        Search
-      </button>
-    
-    </div>
+  <!-- Search Type -->
+  <select
+    [(ngModel)]="selectedSearchType"
+    class="px-3 py-2 border border-surface-200 rounded-lg text-sm bg-white"
+  >
+    <option value="violation">Violation Number</option>
+    <option value="carPlate">Car Plate</option>
+  </select>
+
+  <!-- Search Input -->
+  <input
+    type="text"
+    placeholder="Search..."
+    [value]="selectedSearchType === 'violation' ? searchViolationNumber() : searchCarPlate()"
+    (input)="onSearchInput($any($event.target).value)"
+    class="flex-1 px-3 py-2 border border-surface-200 rounded-lg text-sm"
+  />
+
+  <!-- Paid Status -->
+  <select
+    [ngModel]="searchIsPaid()"
+    (ngModelChange)="searchIsPaid.set($event)"
+    class="px-3 py-2 border border-surface-200 rounded-lg text-sm bg-white"
+  >
+    <option [ngValue]="null">All Status</option>
+    <option [ngValue]="true">Paid</option>
+    <option [ngValue]="false">Unpaid</option>
+  </select>
+
+  <!-- Search Button -->
+  <button
+    (click)="search()"
+    class="px-4 py-2 bg-red-600 text-white rounded-lg text-sm"
+  >
+    Search
+  </button>
+
+  <!-- Reset -->
+  <button
+    (click)="resetFilters()"
+    class="px-4 py-2 border border-surface-200 rounded-lg text-sm"
+  >
+    Reset
+  </button>
+
+</div>
 
     <!-- Table -->
     <p-table

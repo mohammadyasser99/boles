@@ -63,26 +63,6 @@ public class UsersController : ControllerBase
         }
     }
 
-
-
-    /// <summary>Create a new user.</summary>
-    [HttpPost("CreateUserWithCar")]
-    [ProducesResponseType(typeof(ApiResponse<UserDto>), 201)]
-    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
-    public async Task<IActionResult> CreateUserWithCar([FromBody] CreateUserWithCarDto dto)
-    {
-        try
-        {
-            var result = await _userService.CreateUserWithCarAsync(dto);
-            return CreatedAtAction(nameof(GetById), new { id = result.Id },
-                ApiResponse<UserDto>.Ok(result, "User created successfully."));
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(ApiResponse<object>.Fail(ex.Message));
-        }
-    }
-
     /// <summary>Update user with optional document upload.</summary>
     [HttpPut("{id:guid}/update")]
     [Consumes("multipart/form-data")]
@@ -107,11 +87,33 @@ public class UsersController : ControllerBase
     }
 
 
+    /// <summary>Create a new user.</summary>
+    [HttpPost("CreateUserWithCar")]
+    [Consumes("multipart/form-data")]
+    [ProducesResponseType(typeof(ApiResponse<UserDto>), 201)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    public async Task<IActionResult> CreateUserWithCar([FromBody] CreateUserWithCarDto dto)
+    {
+        try
+        {
+            var result = await _userService.CreateUserWithCarAsync(dto);
+            return CreatedAtAction(nameof(GetById), new { id = result.Id },
+                ApiResponse<UserDto>.Ok(result, "User created successfully."));
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ApiResponse<object>.Fail(ex.Message));
+        }
+    }
+
+
+
+
     //update the user and the car
     [HttpPost("UpdateCarAndUser")]
-    [ProducesResponseType(typeof(ApiResponse<string>), 201)]
-    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
-    public async Task<IActionResult> ModifyCarAndUser([FromBody] CreateUserWithCarDto dto)
+    [Consumes("multipart/form-data")]
+    [ProducesResponseType(typeof(ApiResponse<string>), 200)]
+    public async Task<IActionResult> ModifyCarAndUser([FromForm] CreateUserWithCarDto dto)
     {
         try
         {
@@ -125,7 +127,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet("GetUserWithCar/{userId}")]
-    [ProducesResponseType(typeof(ApiResponse<CreateUserWithCarDto>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<UserWithCarDto>), 200)]
     [ProducesResponseType(typeof(ApiResponse<object>), 404)]
     public async Task<IActionResult> GetUserWithCar(Guid userId)
     {
@@ -134,7 +136,7 @@ public class UsersController : ControllerBase
         if (result == null)
             return NotFound(ApiResponse<object>.Fail("User or Car not found"));
 
-        return Ok(ApiResponse<CreateUserWithCarDto>.Ok(result));
+        return Ok(ApiResponse<UserWithCarDto>.Ok(result));
     }
 
     /// <summary>Update an existing user.</summary>

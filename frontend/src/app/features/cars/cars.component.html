@@ -85,8 +85,16 @@
                 (click)="openAssign(car)"></button>
               <button pButton icon="pi pi-dollar" pTooltip="Set Rental Price" tooltipPosition="top" severity="warning"
                 (click)="openRentalPrice(car)"></button>
-              <button pButton label="Go To Details" icon="pi pi-arrow-right" tooltipPosition="top"
-                class="!bg-green-600 !border-green-600 !text-white" (click)="goToDetails(car)"></button>
+                <button
+                pButton
+                label="Go To Details"
+                icon="pi pi-arrow-right"
+                tooltipPosition="top"
+                class="!bg-green-600 !border-green-600 !text-white"
+                [disabled]="!car.userId"
+                [pTooltip]="car.userId ? 'View Details' : 'Assign a user first'"
+                (click)="goToDetails(car)">
+              </button>
             </div>
           </td>
         </tr>
@@ -102,49 +110,79 @@
 
 <!-- Create Car Dialog -->
 <p-dialog header="Register New Car" [(visible)]="showCreate" [modal]="true" [style]="{width:'420px'}">
-  <div class="space-y-4 pt-2">
-  <!-- Plate -->
-  <div class="space-y-1.5">
-    <label class="text-xs font-display font-600 text-surface-500 uppercase">Car Plate *</label>
-    <input pInputText [(ngModel)]="newPlate" class="w-full !rounded-xl" />
-  </div>
+  <form [formGroup]="carForm" class="space-y-4 pt-2">
 
-  <!-- Brand -->
-  <div class="space-y-1.5">
-    <label class="text-xs font-display font-600 text-surface-500 uppercase">Brand</label>
-    <input pInputText [(ngModel)]="newBrand" class="w-full !rounded-xl" />
-  </div>
-
-  <!-- Model -->
-  <div class="space-y-1.5">
-    <label class="text-xs font-display font-600 text-surface-500 uppercase">Model</label>
-    <input pInputText [(ngModel)]="newModel" class="w-full !rounded-xl" />
-  </div>
-
-  <!-- Year -->
-  <div class="space-y-1.5">
-    <label class="text-xs font-display font-600 text-surface-500 uppercase">Year</label>
-    <p-inputNumber [(ngModel)]="newYear" [min]="1900" [max]="2100"
-      styleClass="w-full" inputStyleClass="w-full !rounded-xl" />
-  </div>
-
-  <!-- Chassis -->
-  <div class="space-y-1.5">
-    <label class="text-xs font-display font-600 text-surface-500 uppercase">Chassis Number</label>
-    <input pInputText [(ngModel)]="newChassisNumber" class="w-full !rounded-xl" />
-  </div>
-
-  <!-- Rental Price -->
-  <div class="space-y-1.5">
-    <label class="text-xs font-display font-600 text-surface-500 uppercase">Rental Price (AED)</label>
-    <p-inputNumber [(ngModel)]="newRentalPrice" [min]="0"
-      styleClass="w-full" inputStyleClass="w-full !rounded-xl" />
-  </div>
-  </div>
+    <!-- Plate -->
+    <div class="space-y-1.5">
+      <label class="text-xs font-display font-600 text-surface-500 uppercase">
+        Car Plate *
+      </label>
+  
+      <input pInputText formControlName="carPlate" class="w-full !rounded-xl" />
+  
+      <small class="text-red-500 text-xs"
+             *ngIf="carForm.get('carPlate')?.touched && carForm.get('carPlate')?.invalid">
+        Car plate is required
+      </small>
+    </div>
+  
+    <!-- Brand -->
+    <div class="space-y-1.5">
+      <label class="text-xs font-display font-600 text-surface-500 uppercase">Brand</label>
+      <input pInputText formControlName="brand" class="w-full !rounded-xl" />
+    </div>
+  
+    <!-- Model -->
+    <div class="space-y-1.5">
+      <label class="text-xs font-display font-600 text-surface-500 uppercase">Model</label>
+      <input pInputText formControlName="model" class="w-full !rounded-xl" />
+    </div>
+  
+    <!-- Year -->
+    <div class="space-y-1.5">
+      <label class="text-xs font-display font-600 text-surface-500 uppercase">Year</label>
+  
+      <p-inputNumber 
+        formControlName="year"
+        [min]="1900"
+        [max]="2100"
+        styleClass="w-full"
+        inputStyleClass="w-full !rounded-xl">
+      </p-inputNumber>
+    </div>
+  
+    <!-- Chassis -->
+    <div class="space-y-1.5">
+      <label class="text-xs font-display font-600 text-surface-500 uppercase">Chassis Number</label>
+      <input pInputText formControlName="chassisNumber" class="w-full !rounded-xl" />
+    </div>
+  
+    <!-- Rental Price -->
+    <div class="space-y-1.5">
+      <label class="text-xs font-display font-600 text-surface-500 uppercase">
+        Rental Price (AED)
+      </label>
+  
+      <p-inputNumber 
+        formControlName="rentalPrice"
+        [min]="0"
+        styleClass="w-full"
+        inputStyleClass="w-full !rounded-xl">
+      </p-inputNumber>
+    </div>
+  
+  </form>
   <ng-template pTemplate="footer">
     <button pButton label="Cancel" class="!p-button-text !rounded-xl" (click)="showCreate=false"></button>
-    <button pButton label="Register" icon="pi pi-check" [loading]="saving()"
-      class="!bg-brand-600 !border-brand-600 !rounded-xl !font-display !font-700" (click)="createCar()"></button>
+    <button 
+    pButton 
+    label="Register" 
+    icon="pi pi-check" 
+    [loading]="saving()" 
+    [disabled]="carForm.invalid"
+    class="!bg-brand-600 !border-brand-600 !rounded-xl !font-display !font-700"
+    (click)="createCar()">
+  </button>
   </ng-template>
 </p-dialog>
 
