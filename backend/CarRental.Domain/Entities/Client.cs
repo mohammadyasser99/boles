@@ -1,5 +1,5 @@
 namespace CarRental.Domain.Entities;
-public class User
+public class Client
 {
     public Guid Id { get; set; }
     public string Name { get; set; } 
@@ -10,8 +10,8 @@ public class User
     public DateOnly JoinDate { get; set; }
     // Navigation
     public virtual ICollection<Car> Cars { get; set; } = new List<Car>();
-    public virtual ICollection<MonthlyRentalPayment> MonthlyPayments { get; set; }
-    = new List<MonthlyRentalPayment>();
-    public virtual ICollection<UserDocument> Documents { get; set; }
-    = new List<UserDocument>();
+    public virtual ICollection<Payment> Payments { get; set; }
+    = new List<Payment>();
+    public virtual ICollection<ClientDocument> Documents { get; set; }
+    = new List<ClientDocument>();
 }

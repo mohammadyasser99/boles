@@ -124,22 +124,18 @@ namespace CarRental.Application.Services
         public async Task<TotalEntranceFeesForCar?> GetCarEntranceFeesByPlateAsync(string carPlate)
         {
             var fees = await _entranceFeeRepository.GetAll()
-                .Where(x => x.CarPlate == carPlate && x.IsPaid == false)
+                .Where(x => x.CarPlate == carPlate && !x.IsPaid)
                 .AsNoTracking()
-                .Select(x => new
-                {
-                    x.Amount,
-                    x.TripNumber
-                })
+                .Select(x => new EntranceFeeDto(x.TripNumber, x.Amount))
                 .ToListAsync();
 
             if (!fees.Any())
                 return null;
 
             return new TotalEntranceFeesForCar(
-                CarPlate: carPlate,
-                TotalEntranceFees: fees.Sum(x => x.Amount),
-                TripNumbers: fees.Select(x => x.TripNumber)
+                carPlate,
+                fees.Sum(x => x.Amount),
+                fees
             );
         }
 

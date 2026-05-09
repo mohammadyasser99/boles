@@ -36,7 +36,7 @@ public class UserService : IUserService
 
                 u.Documents.Select(d => new UserDocumentDto(
                     d.Id,
-                    d.UserId,
+                    d.ClientId,
                     d.DocumentType.ToString(),
                     d.FileName,
                     d.ContentType,
@@ -56,7 +56,7 @@ public class UserService : IUserService
 
     public async Task<UserDto> CreateUserWithCarAsync(CreateUserWithCarDto dto)
     {
-        var user = new User
+        var user = new Client
         {
             Id = Guid.NewGuid(),
             Name = dto.Name,
@@ -74,7 +74,7 @@ public class UserService : IUserService
             Model = dto.Model,
             RentalPrice = dto.RentalPrice,
             ChassisNumber = dto.ChassisNumber,
-            UserId = user.Id
+            ClientId = user.Id
         };
         await _carRepository.AddAsync(car);
 
@@ -138,14 +138,14 @@ public class UserService : IUserService
                     RentalPrice = dto.RentalPrice,
                     ChassisNumber = dto.ChassisNumber,
                     Year = dto.Year,
-                    UserId = dto.UserId
+                    ClientId = dto.UserId
                 };
 
                 await _carRepository.AddAsync(car);
             }
             else
             {
-                car.UserId = dto.UserId;
+                car.ClientId = dto.UserId;
                 car.ChassisNumber = dto.ChassisNumber;
                 car.CarPlate = dto.CarPlate;
                 car.RentalPrice = dto.RentalPrice;
@@ -160,7 +160,7 @@ public class UserService : IUserService
             user.NationalId = dto.NationalId;
             user.Email = dto.Email;
             user.DateOfPayment = dto.DateOfPayment;
-
+            user.JoinDate = dto.JoinDate;
             // ── DOCUMENT SYNC ────────────────────────
             var existingDocs = (await _documentService.GetUserDocumentsAsync(dto.UserId)).ToList();
 
@@ -199,7 +199,7 @@ public class UserService : IUserService
     {
         try
         {
-            var user = new User
+            var user = new Client
             {
                 Id = Guid.NewGuid(),
                 Name = dto.Name,
@@ -336,7 +336,7 @@ public class UserService : IUserService
 
                 u.Documents.Select(d => new UserDocumentDto(
                     d.Id,
-                    d.UserId,
+                    d.ClientId,
                     d.DocumentType.ToString(),
                     d.FileName,
                     d.ContentType,

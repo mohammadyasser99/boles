@@ -75,6 +75,9 @@ export interface CreateMonthlyRentalPaymentRequestDto {
   paidAt: string;
   carPlate: string;
   userId: string;
+  paymentType:string;
+  violationNumber?: string;
+  tripNumber?: string;
 }
 export interface UpdateMonthlyRentalPaymentRequestDto {
   amount: number;
@@ -86,6 +89,16 @@ export interface Admin { id: string; name: string; username: string; role: strin
 export interface CreateAdminRequest { name: string; username: string; password: string; role: string; }
 
 // Fines
+export interface CarFine {
+  violationNumber: string;
+  amount: number;
+}
+
+export interface TotalFinesForCar {
+  carPlate: string;
+  totalAmount: number;
+  fines: CarFine[];
+}
 export interface FineImportResult {
   totalRowsProcessed: number;
   newFinesAdded: number;
@@ -100,6 +113,16 @@ export interface CarFinesSummary {
 }
 
 // Entrance Fees
+export interface EntranceFee {
+  tripNumber: string;
+  amount: number;
+}
+
+export interface TotalEntranceFeesForCar {
+  carPlate: string;
+  totalEntranceFees: number;
+  fees: EntranceFee[];
+}
 export interface EntranceFeeImportResult {
   totalRowsProcessed: number;
   newFeesAdded: number;

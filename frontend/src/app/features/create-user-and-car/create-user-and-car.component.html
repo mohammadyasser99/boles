@@ -46,30 +46,30 @@
 
   </div>
 
-  <!-- PAYMENT DATE -->
-  <div>
-    <label class="block text-sm mb-1 text-gray-600">Date of Payment</label>
-    <p-calendar formControlName="dateOfPayment"
-                dateFormat="yy-mm-dd"
-                class="w-full"
-                [showIcon]="true">
-    </p-calendar>
-  </div>
+<!-- PAYMENT DATE -->
+<div>
+  <label class="block text-sm mb-1 text-gray-600">Date of Payment</label>
 
-  <!-- JOIN DATE -->
-  <div>
-    <label class="block text-sm mb-1 text-gray-600">Join Date</label>
-    <p-calendar formControlName="joinDate"
-                dateFormat="yy-mm-dd"
-                class="w-full"
-                [showIcon]="true">
-    </p-calendar>
+  <input
+    type="date"
+    formControlName="dateOfPayment"
+    class="w-full border border-surface-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500">
+</div>
 
-    <small class="text-red-500 text-xs"
-      *ngIf="form.get('joinDate')?.touched && form.get('joinDate')?.invalid">
-      Join date is required
-    </small>
-  </div>
+<!-- JOIN DATE -->
+<div>
+  <label class="block text-sm mb-1 text-gray-600">Join Date</label>
+
+  <input
+    type="date"
+    formControlName="joinDate"
+    class="w-full border border-surface-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500">
+
+  <small class="text-red-500 text-xs"
+    *ngIf="form.get('joinDate')?.touched && form.get('joinDate')?.invalid">
+    Join date is required
+  </small>
+</div>
 
   <!-- CAR -->
   <div class="border-t pt-4 space-y-4">

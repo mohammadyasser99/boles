@@ -108,28 +108,27 @@ public class FineService : IFineService
     {
         return await _carRepository.GetAll().Select(c => new CarDebtDto(
             c.CarPlate,
-            c.User.Name,
-            c.User.Email,
-            c.User.PhoneNumber
+            c.Client.Name,
+            c.Client.Email,
+            c.Client.PhoneNumber
         )).AsNoTracking().ToListAsync();
     }
 
     public async Task<TotalFinesForCar?> GetCarFinesByPlateAsync(string carPlate)
     {
         var fines = await _fineRepository.GetAll()
-            .Where(x => x.CarPlate == carPlate && !x.IsPaid)
-            .AsNoTracking()
-            .Select(x => new
-            {
-                x.Amount,
-                x.ViolationNumber
-            })
-            .ToListAsync();
+       .Where(x => x.CarPlate == carPlate && !x.IsPaid)
+       .AsNoTracking()
+       .Select(x => new CarFineDto(x.ViolationNumber, x.Amount))
+       .ToListAsync();
+
+        if (!fines.Any())
+            return null;
 
         return new TotalFinesForCar(
             carPlate,
             fines.Sum(x => x.Amount),
-            fines.Select(x => x.ViolationNumber)
+            fines
         );
     }
 

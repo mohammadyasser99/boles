@@ -10,7 +10,7 @@ import { DropdownModule } from 'primeng/dropdown';
 import { CalendarModule } from 'primeng/calendar';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
-import { CarService, PaymentService, UserService } from 'src/app/core/services/api.services';
+import { CarService, EntranceFeeService, FineService, PaymentService, UserService } from 'src/app/core/services/api.services';
 import { MonthlyRentalPaymentDto } from 'src/app/core/models';
 
 @Component({
@@ -37,7 +37,17 @@ export class MonthlyRentalPaymentComponent implements OnInit {
   private userService = inject(UserService);
   private carService = inject(CarService);
   private toast = inject(MessageService);
+private entranceFeeService = inject(EntranceFeeService);
 
+private fineService = inject(FineService);
+  paymentTypeOptions = [
+    { label: 'Monthly Rental Payment', value: 1 },
+    { label: 'Fines Payment', value: 2 },
+    { label: 'Entrance Fees Payment', value: 3 }
+  ];
+feeOptions = signal<{ label: string; value: string; amount: number }[]>([]);
+  fineOptions = signal<{ label: string; value: string; amount: number }[]>([]);
+selectedFineAmount = signal<number>(0);
   payments = signal<MonthlyRentalPaymentDto[]>([]);
   loading = signal(false);
   saving = signal(false);
@@ -48,6 +58,7 @@ export class MonthlyRentalPaymentComponent implements OnInit {
 
   userOptions = signal<{ label: string; value: string }[]>([]);
   carOptions = signal<{ label: string; value: string }[]>([]);
+private allCars = signal<{ carPlate: string; userId: string | null }[]>([]);
 
   private fb = inject(FormBuilder);
 
@@ -59,15 +70,17 @@ export class MonthlyRentalPaymentComponent implements OnInit {
     this.loadUsers();
     this.loadCars();
   }
-
-  initForm() {
-    this.form = this.fb.group({
-      userId: [''],
-      carPlate: [''],
-      amount: [null, Validators.required],
-      paidAt: [null, Validators.required]
-    });
-  }
+initForm() {
+  this.form = this.fb.group({
+    userId: [''],
+    carPlate: [''],
+    amount: [null, Validators.required],
+    paidAt: [null, Validators.required],
+    paymentType: [null, Validators.required],
+    violationNumber: [''],
+    tripNumber: ['']
+  });
+}
 
   loadPayments(): void {
     this.loading.set(true);
@@ -94,24 +107,117 @@ export class MonthlyRentalPaymentComponent implements OnInit {
   loadCars(): void {
     this.carService.getAll().subscribe(res => {
       if (res.success && res.data) {
+        // Store full car data including userId
+        this.allCars.set(res.data.map(c => ({ carPlate: c.carPlate, userId: c.userId ?? null })));
+        // Initially show all cars
         this.carOptions.set(res.data.map(c => ({ label: c.carPlate, value: c.carPlate })));
       }
     });
   }
 
-  openCreate(): void {
-    this.editMode.set(false);
-    this.editId = '';
-  
-    this.form.reset({
-      userId: '',
-      carPlate: '',
-      amount: null,
-      paidAt: null
-    });
-  
-    this.showDialog = true;
+
+  loadFines(): void {
+  const paymentType = this.form.get('paymentType')?.value;
+  const carPlate = this.form.get('carPlate')?.value;
+
+  // Only load fines when payment type = fines
+  if (paymentType !== 2 || !carPlate) {
+    this.fineOptions.set([]);
+    return;
   }
+
+  this.fineService.getDebtByPlate(carPlate).subscribe({
+    next: res => {
+      if (res.success && res.data) {
+        const fines = res.data.fines.map(f => ({
+          label: `${f.violationNumber} - ${f.amount} EGP`,
+          value: f.violationNumber,
+          amount: f.amount
+        }));
+
+        this.fineOptions.set(fines);
+      }
+    },
+    error: () => {
+      this.toast.add({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'Failed to load fines'
+      });
+    }
+  });
+}
+
+openCreate(): void {
+  this.editMode.set(false);
+  this.editId = '';
+
+this.form.reset({
+  userId: '',
+  carPlate: '',
+  amount: null,
+  paidAt: null,
+  paymentType: null,
+  violationNumber: '',
+  tripNumber: ''
+});
+
+  this.showDialog = true;
+
+  // Filter cars by user
+  this.form.get('userId')?.valueChanges.subscribe(selectedUserId => {
+    this.form.patchValue({ carPlate: '' }, { emitEvent: false });
+
+    if (!selectedUserId) {
+      this.carOptions.set(
+        this.allCars().map(c => ({
+          label: c.carPlate,
+          value: c.carPlate
+        }))
+      );
+    } else {
+      const filtered = this.allCars()
+        .filter(c => c.userId === selectedUserId)
+        .map(c => ({
+          label: c.carPlate,
+          value: c.carPlate
+        }));
+
+      this.carOptions.set(filtered);
+    }
+  });
+
+this.form.get('paymentType')?.valueChanges.subscribe(() => {
+  this.loadFines();
+  this.loadEntranceFees();
+});
+
+this.form.get('carPlate')?.valueChanges.subscribe(() => {
+  this.loadFines();
+  this.loadEntranceFees();
+});
+
+this.form.get('tripNumber')?.valueChanges.subscribe(v => {
+  const fee = this.feeOptions().find(f => f.value === v);
+
+  if (fee) {
+    this.form.patchValue({
+      amount: fee.amount
+    });
+  }
+});
+
+  // Auto fill amount when fine selected
+  this.form.get('violationNumber')?.valueChanges.subscribe(v => {
+    const fine = this.fineOptions().find(f => f.value === v);
+
+    if (fine) {
+      this.form.patchValue({
+        amount: fine.amount
+      });
+    }
+  });
+}
   openEdit(payment: MonthlyRentalPaymentDto): void {
     this.editMode.set(true);
     this.editId = payment.id;
@@ -120,13 +226,41 @@ export class MonthlyRentalPaymentComponent implements OnInit {
       userId: payment.userId,
       carPlate: payment.carPlate,
       amount: payment.amount,
-      paidAt: payment.paidAt ? new Date(payment.paidAt) : null
-    });
+      paidAt: payment.paidAt
+      ? payment.paidAt.toString().split('T')[0]
+      : null
+        });
   
     this.showDialog = true;
   }
 
+loadEntranceFees(): void {
+  const paymentType = this.form.get('paymentType')?.value;
+  const carPlate = this.form.get('carPlate')?.value;
 
+  // Entrance Fees Payment
+  if (paymentType !== 3 || !carPlate) {
+    this.feeOptions.set([]);
+    return;
+  }
+
+  this.entranceFeeService.getFeesByPlate(carPlate).subscribe({
+    next: res => {
+      if (res.success && res.data) {
+        const fees = res.data.fees.map(f => ({
+          label: `${f.tripNumber} - ${f.amount} EGP`,
+          value: f.tripNumber,
+          amount: f.amount
+        }));
+
+        this.feeOptions.set(fees);
+      }
+    },
+    error: () => {
+
+    }
+  });
+}
 save(): void {
   if (this.form.invalid) {
     this.form.markAllAsTouched();
@@ -153,11 +287,24 @@ save(): void {
         paidAt
       })
     : this.paymentService.create({
-        amount: formValue.amount,
-        paidAt,
-        carPlate: formValue.carPlate,
-        userId: formValue.userId
-      });
+    amount: formValue.amount,
+    paidAt,
+    carPlate: formValue.carPlate,
+    userId: formValue.userId,
+    paymentType: formValue.paymentType,
+
+    // append only for fines payment
+    violationNumber:
+      formValue.paymentType === 2
+        ? formValue.violationNumber
+        : null,
+
+    // append only for entrance fees payment
+    tripNumber:
+      formValue.paymentType === 3
+        ? formValue.tripNumber
+        : null
+  });
 
   request$.subscribe({
     next: res => {
@@ -185,10 +332,17 @@ save(): void {
   });
 }
 
-  private toDateOnly(date: Date): string {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, '0');
-    const d = String(date.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
+private toDateOnly(date: string | Date): string {
+  if (!date) return '';
+
+  if (typeof date === 'string') {
+    return date;
   }
+
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+
+  return `${y}-${m}-${d}`;
+}
 }

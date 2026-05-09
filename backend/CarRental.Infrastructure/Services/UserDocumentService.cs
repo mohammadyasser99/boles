@@ -56,7 +56,7 @@ namespace CarRental.Infrastructure.Services
                     $"Allowed: {string.Join(", ", AllowedTypes[documentType])}");
 
             // Delete existing document of same type if exists (replace)
-            var existing = await _documentRepository.GetAll().Where(x => x.UserId == userId && x.DocumentType == documentType).FirstOrDefaultAsync();
+            var existing = await _documentRepository.GetAll().Where(x => x.ClientId == userId && x.DocumentType == documentType).FirstOrDefaultAsync();
             if (existing != null)
             {
                 await _fileStorage.DeleteFileAsync(existing.FilePath);
@@ -67,10 +67,10 @@ namespace CarRental.Infrastructure.Services
             var subFolder = $"users/{userId}";
             var (storedFileName, filePath) = await _fileStorage.SaveFileAsync(file, subFolder);
 
-            var document = new UserDocument
+            var document = new ClientDocument
             {
                 Id = Guid.NewGuid(),
-                UserId = userId,
+                ClientId = userId,
                 DocumentType = documentType,
                 FileName = file.FileName,
                 StoredFileName = storedFileName,
@@ -90,7 +90,7 @@ namespace CarRental.Infrastructure.Services
             _ = await _userRepository.GetByIdAsync(userId)
                 ?? throw new KeyNotFoundException($"User '{userId}' not found.");
 
-            var docs = await _documentRepository.GetAll().Where(x=>x.UserId ==userId).AsNoTracking().ToListAsync();
+            var docs = await _documentRepository.GetAll().Where(x=>x.ClientId ==userId).AsNoTracking().ToListAsync();
             return docs.Select(ToDto);
         }
 
@@ -114,8 +114,8 @@ namespace CarRental.Infrastructure.Services
             await _documentRepository.DeleteAsync(doc.Id);
         }
 
-        private static UserDocumentDto ToDto(UserDocument d) => new(
-            d.Id, d.UserId, d.DocumentType.ToString(),
+        private static UserDocumentDto ToDto(ClientDocument d) => new(
+            d.Id, d.ClientId, d.DocumentType.ToString(),
             d.FileName, d.ContentType, d.FileSizeBytes, d.UploadedAt);
     }
 }

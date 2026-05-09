@@ -1,6 +1,7 @@
 ﻿using CarRental.Application.Common;
 using CarRental.Application.DTOs;
 using CarRental.Application.Interfaces;
+using CarRental.Application.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -16,6 +17,21 @@ namespace CarRental.API.Controllers
 
         public EntranceFeesController(IEntranceFeeService entranceFeeService) =>
             _entranceFeeService = entranceFeeService;
+
+
+
+        /// <summary>Get total debt for a specific car plate.</summary>
+        [HttpGet("fees/{carPlate}")]
+        [ProducesResponseType(typeof(ApiResponse<TotalEntranceFeesForCar>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+        public async Task<IActionResult> GetFeesByPlate(string carPlate)
+        {
+            var result = await _entranceFeeService.GetCarEntranceFeesByPlateAsync(carPlate);
+            if (result == null)
+                return NotFound(ApiResponse<object>.Fail($"Car '{carPlate}' not found."));
+
+            return Ok(ApiResponse<TotalEntranceFeesForCar>.Ok(result));
+        }
 
         /// <summary>
         /// Upload entrance fees Excel file (city toll trips report).

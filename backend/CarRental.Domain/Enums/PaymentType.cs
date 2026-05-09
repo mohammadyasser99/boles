@@ -6,12 +6,10 @@ using System.Threading.Tasks;
 
 namespace CarRental.Domain.Enums
 {
-    public enum DocumentType
+    public enum PaymentType
     {
-        Contract = 1,
-        DrivingLicence = 2,
-        NationalId = 3
+        MonthlyRental = 1,
+        Fines = 2,
+        EntranceFees = 3
     }
-
-
 }

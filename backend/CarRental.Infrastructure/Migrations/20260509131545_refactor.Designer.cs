@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CarRental.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260504130803_removeyearandmonths")]
-    partial class removeyearandmonths
+    [Migration("20260509131545_refactor")]
+    partial class refactor
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -81,14 +81,14 @@ namespace CarRental.Infrastructure.Migrations
                         .HasMaxLength(17)
                         .HasColumnType("nvarchar(17)");
 
+                    b.Property<Guid?>("ClientId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Model")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal?>("RentalPrice")
                         .HasColumnType("decimal(18,2)");
-
-                    b.Property<Guid?>("UserId")
-                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int?>("Year")
                         .HasColumnType("int");
@@ -99,9 +99,98 @@ namespace CarRental.Infrastructure.Migrations
                         .IsUnique()
                         .HasFilter("[ChassisNumber] IS NOT NULL");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("ClientId");
 
                     b.ToTable("Cars");
+                });
+
+            modelBuilder.Entity("CarRental.Domain.Entities.Client", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateOnly?>("DateOfPayment")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateOnly>("JoinDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("NationalId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("PhoneNumber")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.HasIndex("NationalId")
+                        .IsUnique();
+
+                    b.ToTable("Clients");
+                });
+
+            modelBuilder.Entity("CarRental.Domain.Entities.ClientDocument", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ClientId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("DocumentType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("FilePath")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<long>("FileSizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("StoredFileName")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<DateTime>("UploadedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClientId", "DocumentType");
+
+                    b.ToTable("ClientDocuments");
                 });
 
             modelBuilder.Entity("CarRental.Domain.Entities.EntranceFee", b =>
@@ -192,7 +281,7 @@ namespace CarRental.Infrastructure.Migrations
                     b.ToTable("Fines");
                 });
 
-            modelBuilder.Entity("CarRental.Domain.Entities.MonthlyRentalPayment", b =>
+            modelBuilder.Entity("CarRental.Domain.Entities.Payment", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -208,6 +297,9 @@ namespace CarRental.Infrastructure.Migrations
                     b.Property<DateOnly>("PaidAt")
                         .HasColumnType("date");
 
+                    b.Property<int>("PaymentType")
+                        .HasColumnType("int");
+
                     b.Property<Guid>("UserId")
                         .HasColumnType("uniqueidentifier");
 
@@ -217,107 +309,28 @@ namespace CarRental.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("MonthlyRentalPayment");
-                });
-
-            modelBuilder.Entity("CarRental.Domain.Entities.User", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateOnly?>("DateOfPayment")
-                        .HasColumnType("date");
-
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<DateOnly>("JoinDate")
-                        .HasColumnType("date");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<string>("NationalId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("PhoneNumber")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Email")
-                        .IsUnique();
-
-                    b.HasIndex("NationalId")
-                        .IsUnique();
-
-                    b.ToTable("Users");
-                });
-
-            modelBuilder.Entity("CarRental.Domain.Entities.UserDocument", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("ContentType")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("DocumentType")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
-
-                    b.Property<string>("FileName")
-                        .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
-
-                    b.Property<string>("FilePath")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<long>("FileSizeBytes")
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("StoredFileName")
-                        .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
-
-                    b.Property<DateTime>("UploadedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId", "DocumentType")
-                        .IsUnique();
-
-                    b.ToTable("UserDocuments");
+                    b.ToTable("Payment");
                 });
 
             modelBuilder.Entity("CarRental.Domain.Entities.Car", b =>
                 {
-                    b.HasOne("CarRental.Domain.Entities.User", "User")
+                    b.HasOne("CarRental.Domain.Entities.Client", "Client")
                         .WithMany("Cars")
-                        .HasForeignKey("UserId")
+                        .HasForeignKey("ClientId")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.Navigation("User");
+                    b.Navigation("Client");
+                });
+
+            modelBuilder.Entity("CarRental.Domain.Entities.ClientDocument", b =>
+                {
+                    b.HasOne("CarRental.Domain.Entities.Client", "Client")
+                        .WithMany("Documents")
+                        .HasForeignKey("ClientId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Client");
                 });
 
             modelBuilder.Entity("CarRental.Domain.Entities.EntranceFee", b =>
@@ -342,32 +355,21 @@ namespace CarRental.Infrastructure.Migrations
                     b.Navigation("Car");
                 });
 
-            modelBuilder.Entity("CarRental.Domain.Entities.MonthlyRentalPayment", b =>
+            modelBuilder.Entity("CarRental.Domain.Entities.Payment", b =>
                 {
                     b.HasOne("CarRental.Domain.Entities.Car", "Car")
-                        .WithMany("MonthlyPayments")
+                        .WithMany("Payments")
                         .HasForeignKey("CarPlate")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("CarRental.Domain.Entities.User", "User")
-                        .WithMany("MonthlyPayments")
+                    b.HasOne("CarRental.Domain.Entities.Client", "User")
+                        .WithMany("Payments")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Car");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("CarRental.Domain.Entities.UserDocument", b =>
-                {
-                    b.HasOne("CarRental.Domain.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
 
                     b.Navigation("User");
                 });
@@ -378,14 +380,16 @@ namespace CarRental.Infrastructure.Migrations
 
                     b.Navigation("Fines");
 
-                    b.Navigation("MonthlyPayments");
+                    b.Navigation("Payments");
                 });
 
-            modelBuilder.Entity("CarRental.Domain.Entities.User", b =>
+            modelBuilder.Entity("CarRental.Domain.Entities.Client", b =>
                 {
                     b.Navigation("Cars");
 
-                    b.Navigation("MonthlyPayments");
+                    b.Navigation("Documents");
+
+                    b.Navigation("Payments");
                 });
 #pragma warning restore 612, 618
         }

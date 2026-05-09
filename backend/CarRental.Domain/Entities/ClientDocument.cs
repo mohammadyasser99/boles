@@ -7,10 +7,10 @@ using System.Threading.Tasks;
 
 namespace CarRental.Domain.Entities
 {
-    public class UserDocument
+    public class ClientDocument
     {
         public Guid Id { get; set; }
-        public Guid UserId { get; set; }
+        public Guid ClientId { get; set; }
         public DocumentType DocumentType { get; set; }
         public string FileName { get; set; } = string.Empty;       // original file name
         public string StoredFileName { get; set; } = string.Empty; // guid-based name on disk
@@ -20,6 +20,6 @@ namespace CarRental.Domain.Entities
         public DateTime UploadedAt { get; set; } = DateTime.UtcNow;
 
         // Navigation
-        public virtual User? User { get; set; }
+        public virtual Client? Client { get; set; }
     }
 }

@@ -9,11 +9,11 @@ public class AppDbContext : DbContext
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
     public DbSet<Admin> Admins => Set<Admin>();
-    public DbSet<User> Users => Set<User>();
+    public DbSet<Client> Clients => Set<Client>();
     public DbSet<Car> Cars => Set<Car>();
     public DbSet<Fine> Fines => Set<Fine>();
     public DbSet<EntranceFee> EntranceFees => Set<EntranceFee>();
-    public DbSet<UserDocument> UserDocuments => Set<UserDocument>();
+    public DbSet<ClientDocument> ClientDocuments => Set<ClientDocument>();
 
  
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -36,7 +36,7 @@ public class AppDbContext : DbContext
         });
 
         // ── User ────────────────────────────────────────────────────────────
-        modelBuilder.Entity<User>(e =>
+        modelBuilder.Entity<Client>(e =>
         {
             e.HasKey(u => u.Id);
             e.Property(u => u.Name).IsRequired().HasMaxLength(200);
@@ -54,9 +54,9 @@ public class AppDbContext : DbContext
             e.Property(c => c.RentalPrice).HasColumnType("decimal(18,2)");
             e.Property(c => c.ChassisNumber).HasMaxLength(17);
             e.HasIndex(u => u.ChassisNumber).IsUnique();
-            e.HasOne(c => c.User)
+            e.HasOne(c => c.Client)
              .WithMany(u => u.Cars)
-             .HasForeignKey(c => c.UserId)
+             .HasForeignKey(c => c.ClientId)
              .OnDelete(DeleteBehavior.SetNull);
         });
 
@@ -95,7 +95,7 @@ public class AppDbContext : DbContext
              .OnDelete(DeleteBehavior.Cascade);
         });
         // ── UserDocument ─────────────────────────────────────────────────────────
-        modelBuilder.Entity<UserDocument>(e =>
+        modelBuilder.Entity<ClientDocument>(e =>
         {
             e.HasKey(d => d.Id);
             e.Property(d => d.FileName).IsRequired().HasMaxLength(300);
@@ -107,12 +107,12 @@ public class AppDbContext : DbContext
              .HasConversion<string>()
              .HasMaxLength(30);
 
-            e.HasOne(d => d.User)
+            e.HasOne(d => d.Client)
  .WithMany(u => u.Documents)
- .HasForeignKey(d => d.UserId)
+ .HasForeignKey(d => d.ClientId)
  .OnDelete(DeleteBehavior.Cascade);
 
-            e.HasIndex(d => new { d.UserId, d.DocumentType });
+            e.HasIndex(d => new { d.ClientId, d.DocumentType });
         });
 
     }

@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace CarRental.Domain.Interfaces
 {
-    public interface IMonthlyRentalPaymentRepository : IGenericRepository<MonthlyRentalPayment>
+    public interface IMonthlyRentalPaymentRepository : IGenericRepository<Payment>
     {
     }
 }

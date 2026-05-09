@@ -6,7 +6,14 @@ using System.Threading.Tasks;
 
 namespace CarRental.Application.DTOs
 {
-    public record CreateMonthlyRentalPaymentRequestDtos(Guid UserId, string CarPlate , decimal Amount , DateOnly PaidAt);
+    public enum PaymentType
+    {
+        MonthlyRental = 1,
+        Fines = 2,
+        EntranceFees = 3
+    }
+    public record CreateMonthlyRentalPaymentRequestDtos(Guid UserId, string CarPlate , decimal Amount , DateOnly PaidAt,
+            PaymentType PaymentType , string? ViolationNumber , string? TripNumber);
     public record CreateMonthlyRentalPaymentResponseDtos(Guid Id);
     public record CarMonthlyRowDto(
         int Year,

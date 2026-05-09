@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace CarRental.Domain.Interfaces
 {
-    public interface IUserDocumentRepository : IGenericRepository<UserDocument>
+    public interface IUserDocumentRepository : IGenericRepository<ClientDocument>
     {
 
     }

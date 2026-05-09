@@ -9,7 +9,9 @@ import {
   FineImportResult, EntranceFeeImportResult, CarDebt,
   PagedResult, CarSummaryDto,
   MonthlyRentalPaymentDto, CreateMonthlyRentalPaymentRequestDto, UpdateMonthlyRentalPaymentRequestDto,
-  SystemMonthlyRowDto
+  SystemMonthlyRowDto,
+  TotalFinesForCar,
+  TotalEntranceFeesForCar
 } from '../models';
 
 // ── User Service ──────────────────────────────────────────────────────────────
@@ -75,7 +77,11 @@ export class AdminService {
 export class FineService {
   private http = inject(HttpClient);
   private base = `${environment.apiUrl}/fines`;
-
+  getDebtByPlate(carPlate: string) {
+    return this.http.get<ApiResponse<TotalFinesForCar>>(
+      `${this.base}/fines/${carPlate}`
+    );
+  }
 markFineAsPaid(violationNumber: string) {
   return this.http.patch<ApiResponse<any>>(
     `${this.base}/${violationNumber}/pay`,
@@ -119,7 +125,7 @@ searchFines(
   }
 
   getAllDebts(): Observable<ApiResponse<CarDebt[]>> { return this.http.get<ApiResponse<CarDebt[]>>(`${this.base}/debts`); }
-  getDebtByPlate(plate: string): Observable<ApiResponse<CarDebt>> { return this.http.get<ApiResponse<CarDebt>>(`${this.base}/debts/${plate}`); }
+  //getDebtByPlate(plate: string): Observable<ApiResponse<CarDebt>> { return this.http.get<ApiResponse<CarDebt>>(`${this.base}/debts/${plate}`); }
 }
 
 // ── Entrance Fee Service ──────────────────────────────────────────────────────
@@ -127,6 +133,11 @@ searchFines(
 export class EntranceFeeService {
   private http = inject(HttpClient);
   private base = `${environment.apiUrl}/entrance-fees`;
+  getFeesByPlate(carPlate: string) {
+    return this.http.get<ApiResponse<TotalEntranceFeesForCar>>(
+      `${this.base}/fees/${carPlate}`
+    );
+  }
 markAsPaid(tripNumber: string) {
   return this.http.patch<ApiResponse<any>>(
     `${this.base}/${tripNumber}/pay`,

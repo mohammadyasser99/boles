@@ -103,8 +103,13 @@ export class CreateUserAndCarComponent {
           phoneNumber: data.phoneNumber ?? '',
           email: data.email ?? '',
           nationalId: data.nationalId ?? '',
-          dateOfPayment: data.dateOfPayment ? new Date(data.dateOfPayment) : null,
-          joinDate: data.joinDate ? new Date(data.joinDate) : null,
+          dateOfPayment: data.dateOfPayment
+          ? data.dateOfPayment.toString().split('T')[0]
+          : null,
+        
+        joinDate: data.joinDate
+          ? data.joinDate.toString().split('T')[0]
+          : null,
         
           carPlate: data.car?.carPlate ?? '',
           brand: data.car?.brand ?? '',
@@ -178,14 +183,14 @@ export class CreateUserAndCarComponent {
     if (formValue.dateOfPayment) {
       formData.append(
         'dateOfPayment',
-        formValue.dateOfPayment.toISOString().split('T')[0]
+        formValue.dateOfPayment
       );
     }
     
     if (formValue.joinDate) {
       formData.append(
         'joinDate',
-        formValue.joinDate.toISOString().split('T')[0]
+        formValue.joinDate
       );
     }
     

@@ -16,7 +16,6 @@ import { TooltipModule } from 'primeng/tooltip';
 import { DropdownModule } from 'primeng/dropdown';
 import { CalendarModule } from 'primeng/calendar';
 import { Router } from '@angular/router';
-
 @Component({
   selector: 'app-users',
   standalone: true,
@@ -135,10 +134,13 @@ onFileSelected(event: any, index: number): void {
       email: user.email || '',
       phoneNumber: user.phoneNumber || '',
       nationalId: user.nationalId || '',
-      joinDate: user.joinDate ? new Date(user.joinDate) : null,
-      dateOfPayment: user.dateOfPayment
-        ? new Date(user.dateOfPayment)
-        : null
+      joinDate: user.joinDate
+      ? user.joinDate.toString().split('T')[0]
+      : null,
+    
+    dateOfPayment: user.dateOfPayment
+      ? user.dateOfPayment.toString().split('T')[0]
+      : null
     });
   
     this.documents = (user.documents || []).map((d: any) => ({
@@ -201,23 +203,11 @@ onFileSelected(event: any, index: number): void {
     formData.append('nationalId', formValue.nationalId || '');
   
     if (formValue.joinDate) {
-      const date = formValue.joinDate as Date;
-      const formatted =
-        date.getFullYear() + '-' +
-        String(date.getMonth() + 1).padStart(2, '0') + '-' +
-        String(date.getDate()).padStart(2, '0');
-  
-      formData.append('joinDate', formatted);
+      formData.append('joinDate', formValue.joinDate);
     }
-  
+    
     if (formValue.dateOfPayment) {
-      const date = formValue.dateOfPayment as Date;
-      const formatted =
-        date.getFullYear() + '-' +
-        String(date.getMonth() + 1).padStart(2, '0') + '-' +
-        String(date.getDate()).padStart(2, '0');
-  
-      formData.append('dateOfPayment', formatted);
+      formData.append('dateOfPayment', formValue.dateOfPayment);
     }
 
     for (const doc of this.documents) {
@@ -269,4 +259,5 @@ onFileSelected(event: any, index: number): void {
 goToCreateUserCar(): void {
   this.router.navigate(['/create-user-car']);
 }
+
 }

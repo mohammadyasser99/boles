@@ -19,13 +19,13 @@ public class CarService : ICarService
 
     public async Task<IEnumerable<CarDto>> GetAllCarsAsync()
     {
-        return await _carRepository.GetAll().Select(c => new CarDto(c.CarPlate,c.RentalPrice, c.UserId, c.User.Name ,null)).ToListAsync();
+        return await _carRepository.GetAll().Select(c => new CarDto(c.CarPlate,c.RentalPrice, c.ClientId, c.Client.Name ,null)).ToListAsync();
     }
 
     public async Task<CarDto?> GetCarByPlateAsync(string carPlate)
     {
         var car = await _carRepository.GetAll().Where(x=>x.CarPlate ==carPlate).FirstOrDefaultAsync();
-        return car == null ? null : new CarDto(car.CarPlate,car.RentalPrice, car.UserId, car.User?.Name ,null);
+        return car == null ? null : new CarDto(car.CarPlate,car.RentalPrice, car.ClientId, car.Client?.Name ,null);
     }
 
     public async Task<CarDto> CreateCarAsync(CreateCarDto dto)
@@ -46,7 +46,7 @@ public class CarService : ICarService
             ?? throw new KeyNotFoundException($"Car '{dto.CarPlate}' not found.");
         if (dto.UserId == null)
         {
-            car.UserId = null;
+            car.ClientId = null;
         }
         else
         {
@@ -55,7 +55,7 @@ public class CarService : ICarService
 
 
 
-            car.UserId = dto.UserId;
+            car.ClientId = dto.UserId;
         }
 
 
@@ -86,10 +86,10 @@ public class CarService : ICarService
         try
         {
             var query = _carRepository.GetAll()
-                .Include(c => c.User)
+                .Include(c => c.Client)
                 .Include(c => c.Fines)
                 .Include(c => c.EntranceFees)
-                .Include(c => c.MonthlyPayments);
+                .Include(c => c.Payments);
 
             var totalCount = await query.CountAsync();
 
@@ -116,9 +116,9 @@ public class CarService : ICarService
                 decimal unpaidMonthly = 0;
                 int unpaidMonths = 0;
 
-                if (car.User != null && car.RentalPrice.HasValue && car.RentalPrice > 0)
+                if (car.Client != null && car.RentalPrice.HasValue && car.RentalPrice > 0)
                 {
-                    var joinDate = car.User.JoinDate;
+                    var joinDate = car.Client.JoinDate;
 
                     var start = new DateOnly(joinDate.Year, joinDate.Month, 1);
                     var current = new DateOnly(today.Year, today.Month, 1);
@@ -136,10 +136,10 @@ public class CarService : ICarService
 
                 result.Add(new CarDto(
                     CarPlate: car.CarPlate,
-                    UserName: car.User?.Name,
+                    UserName: car.Client?.Name,
                     RentalPrice: car.RentalPrice ?? 0,
                     Totaldebs: total,
-                    UserId: car.UserId
+                    UserId: car.ClientId
                 ));
             }
 

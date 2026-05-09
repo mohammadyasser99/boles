@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace CarRental.Infrastructure.Repositories
 {
-    public class MonthlyRentalPaymentRepository : GenericRepository<MonthlyRentalPayment>, IMonthlyRentalPaymentRepository
+    public class MonthlyRentalPaymentRepository : GenericRepository<Payment>, IMonthlyRentalPaymentRepository
     {
         public MonthlyRentalPaymentRepository(AppDbContext context) : base(context)
         {

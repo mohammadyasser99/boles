@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CarRental.Infrastructure.Repositories;
 
-public class UserRepository : GenericRepository<User>, IUserRepository
+public class UserRepository : GenericRepository<Client>, IUserRepository
 {
     public UserRepository(AppDbContext context) : base(context)  {}
 

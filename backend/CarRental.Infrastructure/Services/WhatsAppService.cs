@@ -53,10 +53,10 @@ namespace CarRental.Infrastructure.Services
             var car = await _carRepository.GetAll().Where(x => x.CarPlate == carPlate).AsNoTracking().FirstAsync()
                 ?? throw new KeyNotFoundException($"Car '{carPlate}' not found.");
 
-            if (car.UserId == null)
+            if (car.ClientId == null)
                 throw new InvalidOperationException($"Car '{carPlate}' has no assigned user.");
 
-            var user = await _userRepository.GetByIdAsync(car.UserId.Value)
+            var user = await _userRepository.GetByIdAsync(car.ClientId.Value)
                 ?? throw new KeyNotFoundException($"User for car '{carPlate}' not found.");
 
             if (string.IsNullOrWhiteSpace(user.PhoneNumber))
@@ -73,7 +73,7 @@ namespace CarRental.Infrastructure.Services
 
         public async Task<IEnumerable<WhatsAppMessageResultDto>> SendBulkDebtRemindersAsync()
         {
-            var carsWithDebt = await _carRepository.GetAll().Where(c => c.UserId != null).ToListAsync();
+            var carsWithDebt = await _carRepository.GetAll().Where(c => c.ClientId != null).ToListAsync();
 
             var results = new List<WhatsAppMessageResultDto>();
             foreach (var car in carsWithDebt)
@@ -99,10 +99,10 @@ namespace CarRental.Infrastructure.Services
                 .FirstOrDefaultAsync()
                 ?? throw new KeyNotFoundException($"Car '{carPlate}' not found.");
 
-            if (car.UserId == null)
+            if (car.ClientId == null)
                 throw new InvalidOperationException($"Car '{carPlate}' has no assigned user.");
 
-            var user = await _userRepository.GetByIdAsync(car.UserId.Value)
+            var user = await _userRepository.GetByIdAsync(car.ClientId.Value)
                 ?? throw new KeyNotFoundException($"User for car '{carPlate}' not found.");
 
             if (string.IsNullOrWhiteSpace(user.Email))

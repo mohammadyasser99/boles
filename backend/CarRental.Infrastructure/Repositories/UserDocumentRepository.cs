@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace CarRental.Infrastructure.Repositories
 {
-    public class UserDocumentRepository : GenericRepository<UserDocument>, IUserDocumentRepository
+    public class UserDocumentRepository : GenericRepository<ClientDocument>, IUserDocumentRepository
     {
         public UserDocumentRepository(AppDbContext context) : base(context) { }
 

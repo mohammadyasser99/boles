@@ -127,14 +127,11 @@
         Join Date *
       </label>
   
-      <p-calendar
-        formControlName="joinDate"
-        dateFormat="yy-mm-dd"
-        [showIcon]="true"
-        styleClass="w-full"
-        inputStyleClass="w-full !rounded-xl"
-        appendTo="body">
-      </p-calendar>
+      <input
+      type="date"
+      placeholder="dd/mm/yyyy"
+      formControlName="joinDate"
+      class="w-full border border-surface-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500">
   
       <small class="text-red-500 text-xs"
         *ngIf="userForm.get('joinDate')?.touched && userForm.get('joinDate')?.invalid">
@@ -147,14 +144,10 @@
         payment Date
       </label>
   
-      <p-calendar
-        formControlName="dateOfPayment"
-        dateFormat="yy-mm-dd"
-        [showIcon]="true"
-        styleClass="w-full"
-        inputStyleClass="w-full !rounded-xl"
-        appendTo="body">
-      </p-calendar>
+      <input
+      type="date"
+      formControlName="dateOfPayment"
+      class="w-full border border-surface-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500">
 
     </div>
   

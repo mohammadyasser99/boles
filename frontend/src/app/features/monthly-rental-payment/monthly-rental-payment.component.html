@@ -58,26 +58,34 @@
           optionValue="value"
           placeholder="Select user"
           appendTo="body"
-          class="w-full">
+          class="w-full"
+          [filter]="true"
+          filterPlaceholder="Search user...">
         </p-dropdown>
       </div>
   
       <!-- Car -->
-      <div class="space-y-1.5">
-        <label class="text-xs font-display font-600 text-surface-500 uppercase">
-          Car Plate *
-        </label>
-  
-        <p-dropdown
-          [options]="carOptions()"
-          formControlName="carPlate"
-          optionLabel="label"
-          optionValue="value"
-          placeholder="Select car"
-          appendTo="body"
-          class="w-full">
-        </p-dropdown>
-      </div>
+<!-- Car -->
+<div class="space-y-1.5">
+  <label class="text-xs font-display font-600 text-surface-500 uppercase">
+    Car Plate *
+  </label>
+
+  <p-dropdown
+    [options]="carOptions()"
+    formControlName="carPlate"
+    optionLabel="label"
+    optionValue="value"
+    [placeholder]="form.get('userId')?.value ? 'Select car' : 'Select a user first'"
+    appendTo="body"
+    [disabled]="!form.get('userId')?.value"
+    class="w-full">
+  </p-dropdown>
+
+  <small class="text-surface-400 text-xs" *ngIf="form.get('userId')?.value && carOptions().length === 0">
+    No cars assigned to this user.
+  </small>
+</div>
   
     }
   
@@ -107,19 +115,88 @@
         Paid At *
       </label>
   
-      <p-calendar
-        formControlName="paidAt"
-        dateFormat="yy-mm-dd"
-        [showIcon]="true"
-        appendTo="body">
-      </p-calendar>
-  
+
+        <input
+  type="date"
+  formControlName="paidAt"
+  class="w-full border border-surface-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500">
+
       <small class="text-red-500 text-xs"
         *ngIf="form.get('paidAt')?.touched && form.get('paidAt')?.invalid">
         Paid date is required
       </small>
     </div>
-  
+    <div class="space-y-1.5">
+      <label class="text-xs font-display font-600 text-surface-500 uppercase">
+        Payment Type *
+      </label>
+    
+      <p-dropdown
+        [options]="paymentTypeOptions"
+        formControlName="paymentType"
+        optionLabel="label"
+        optionValue="value"
+        placeholder="Select payment type"
+        appendTo="body"
+        class="w-full">
+      </p-dropdown>
+    
+      <small class="text-red-500 text-xs"
+        *ngIf="form.get('paymentType')?.touched && form.get('paymentType')?.invalid">
+        Payment type is required
+      </small>
+    </div>
+
+    @if (form.get('paymentType')?.value === 2) {
+
+  <div class="space-y-1.5">
+    <label class="text-xs font-display font-600 text-surface-500 uppercase">
+      Fine *
+    </label>
+
+    <p-dropdown
+      [options]="fineOptions()"
+      formControlName="violationNumber"
+      optionLabel="label"
+      optionValue="value"
+      placeholder="Select fine"
+      appendTo="body"
+      class="w-full">
+    </p-dropdown>
+
+    <small
+      class="text-surface-400 text-xs"
+      *ngIf="fineOptions().length === 0">
+      No fines found for this car.
+    </small>
+  </div>
+
+}
+    @if (form.get('paymentType')?.value === 3) {
+
+  <div class="space-y-1.5">
+    <label class="text-xs font-display font-600 text-surface-500 uppercase">
+      Trip Number *
+    </label>
+
+    <p-dropdown
+      [options]="feeOptions()"
+      formControlName="tripNumber"
+      optionLabel="label"
+      optionValue="value"
+      placeholder="Select trip"
+      appendTo="body"
+      class="w-full">
+    </p-dropdown>
+
+    <small
+      class="text-surface-400 text-xs"
+      *ngIf="feeOptions().length === 0">
+      No entrance fees found for this car.
+    </small>
+  </div>
+
+}
   </form>
 
   <ng-template pTemplate="footer">

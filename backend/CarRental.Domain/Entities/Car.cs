@@ -10,13 +10,13 @@ public class Car
     public decimal? RentalPrice { get; set; }
 
     // FK
-    public Guid? UserId { get; set; }
-    public virtual User? User { get; set; }
+    public Guid? ClientId { get; set; }
+    public virtual Client? Client { get; set; }
 
     // Navigation
     public virtual ICollection<Fine> Fines { get; set; } = new List<Fine>();
     public virtual ICollection<EntranceFee> EntranceFees { get; set; } = new List<EntranceFee>();
-    public virtual ICollection<MonthlyRentalPayment> MonthlyPayments { get; set; }
-    = new List<MonthlyRentalPayment>();
+    public virtual ICollection<Payment> Payments { get; set; }
+    = new List<Payment>();
 
 }

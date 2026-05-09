@@ -7,6 +7,7 @@ using Org.BouncyCastle.Asn1.Pkcs;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.ConstrainedExecution;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -15,18 +16,20 @@ namespace CarRental.Application.Services
     public class MonthlyRentalPaymentService : IMonthlyRentalPaymentService
     {
 
-        private readonly IGenericRepository<MonthlyRentalPayment> _paymentRepository;
-        private readonly IGenericRepository<User> _userRepository;
+        private readonly IGenericRepository<Payment> _paymentRepository;
+        private readonly IGenericRepository<Client> _userRepository;
         private readonly IGenericRepository<Car> _carRepository;
         private readonly IGenericRepository<Fine> _fineRepository;
         private readonly IGenericRepository<EntranceFee> _entrancefeeRepository;
+        private readonly IUnitOfWork _unitOfWork;
 
         public MonthlyRentalPaymentService(
-            IGenericRepository<MonthlyRentalPayment> paymentRepository,
-            IGenericRepository<User> userRepository,
+            IGenericRepository<Payment> paymentRepository,
+            IGenericRepository<Client> userRepository,
             IGenericRepository<Car> carRepository,
             IGenericRepository<EntranceFee> entrancefeerepository,
-            IGenericRepository<Fine> finerepository
+            IGenericRepository<Fine> finerepository,
+            IUnitOfWork unitOfWork
             )
         {
             _paymentRepository = paymentRepository;
@@ -34,6 +37,7 @@ namespace CarRental.Application.Services
             _carRepository = carRepository;
             _fineRepository = finerepository;
             _entrancefeeRepository = entrancefeerepository;
+            _unitOfWork = unitOfWork;
         }
 
         public async Task<CreateMonthlyRentalPaymentResponseDtos> CreateAsync(
@@ -42,25 +46,90 @@ namespace CarRental.Application.Services
             try
             {
                 var user = await _userRepository.GetByIdAsync(request.UserId)
-    ?? throw new Exception("User not found.");
+?? throw new Exception("User not found.");
 
                 var car = await _carRepository
                     .GetAll()
                     .FirstOrDefaultAsync(c => c.CarPlate == request.CarPlate)
                     ?? throw new Exception("Car not found.");
-
-                var payment = new MonthlyRentalPayment
+                //if the amount is monthly car rental
+                if (request.PaymentType == PaymentType.MonthlyRental)
                 {
-                    Id = Guid.NewGuid(),
-                    Amount = request.Amount,
-                    PaidAt = request.PaidAt,
-                    Car = car,
-                    User = user
-                };
 
-                await _paymentRepository.AddAsync(payment);
-                await _paymentRepository.SaveChanges();
-                return new CreateMonthlyRentalPaymentResponseDtos(payment.Id);
+
+                    var payment = new Payment
+                    {
+                        Id = Guid.NewGuid(),
+                        Amount = request.Amount,
+                        PaidAt = request.PaidAt,
+                        Car = car,
+                        User = user,
+                        PaymentType = (Domain.Enums.PaymentType)request.PaymentType
+                    };
+
+                    await _paymentRepository.AddAsync(payment);
+                    await _unitOfWork.SaveChangesAsync();
+                    return new CreateMonthlyRentalPaymentResponseDtos(payment.Id);
+                }else if (request.PaymentType ==PaymentType.Fines)
+                {
+                    var fine =await _fineRepository.GetAll().Where(x => x.ViolationNumber == request.ViolationNumber).FirstOrDefaultAsync();
+                    if (fine !=null)
+                    {
+                        if (fine.Amount ==request.Amount)
+                        {
+                            fine.IsPaid = true;
+                            await _fineRepository.UpdateAsync(fine);
+                        }
+                        else
+                        {
+                            fine.Amount = fine.Amount - request.Amount;
+                            await _fineRepository.UpdateAsync(fine);
+                        }
+                    }
+                    var payment = new Payment
+                    {
+                        Id = Guid.NewGuid(),
+                        Amount = request.Amount,
+                        PaidAt = request.PaidAt,
+                        Car = car,
+                        User = user,
+                        PaymentType = (Domain.Enums.PaymentType)request.PaymentType
+                    };
+
+                    await _paymentRepository.AddAsync(payment);
+                    await _unitOfWork.SaveChangesAsync();
+                    return new CreateMonthlyRentalPaymentResponseDtos(payment.Id);
+
+                }
+                else
+                {
+                    var entrancefee = await _entrancefeeRepository.GetAll().Where(x=>x.TripNumber == request.TripNumber).FirstOrDefaultAsync();
+                    if (entrancefee !=null)
+                    {
+                        entrancefee.Amount =entrancefee.Amount - request.Amount;
+                    }
+                    var payment = new Payment
+                    {
+                        Id = Guid.NewGuid(),
+                        Amount = request.Amount,
+                        PaidAt = request.PaidAt,
+                        Car = car,
+                        User = user,
+                        PaymentType = (Domain.Enums.PaymentType)request.PaymentType
+                    };
+
+                    await _paymentRepository.AddAsync(payment);
+                    _unitOfWork.SaveChangesAsync();
+                    return new CreateMonthlyRentalPaymentResponseDtos(payment.Id);
+
+                }
+
+
+                //if the amount is fines
+
+                //if the amount is entrance fees
+
+
 
             }
             catch (Exception ex)
@@ -80,7 +149,7 @@ namespace CarRental.Application.Services
                 .FirstOrDefaultAsync(c => c.CarPlate == carPlate)
                 ?? throw new KeyNotFoundException($"Car '{carPlate}' not found.");
 
-            DateOnly? joinDate = car.User.JoinDate;
+            DateOnly? joinDate = car.Client.JoinDate;
             decimal monthlyRental = car.RentalPrice ?? 0;
             // ── 2. Fetch related data ─────────────────────────────────────────
             var payments = await _paymentRepository
@@ -178,8 +247,8 @@ namespace CarRental.Application.Services
                 CarYear: car.Year,
                 RentalPrice: car.RentalPrice ?? 0,
                 Rows: rows,
-                JoinDate: car.User.JoinDate,
-                UserName:car.User.Name
+                JoinDate: car.Client.JoinDate,
+                UserName:car.Client.Name
             );
         }
 
