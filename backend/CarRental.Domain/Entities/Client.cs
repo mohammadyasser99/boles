@@ -8,6 +8,9 @@ public class Client
     public string NationalId { get; set; }
     public DateOnly? DateOfPayment { get; set; }
     public DateOnly JoinDate { get; set; }
+    public DateOnly ContractExpiry {  get; set; }
+    public string? PaymentScheduleJson { get; set; }
+
     // Navigation
     public virtual ICollection<Car> Cars { get; set; } = new List<Car>();
     public virtual ICollection<Payment> Payments { get; set; }

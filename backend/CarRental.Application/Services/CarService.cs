@@ -3,6 +3,7 @@ using CarRental.Application.Interfaces;
 using CarRental.Domain.Entities;
 using CarRental.Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace CarRental.Application.Services;
 
@@ -19,13 +20,13 @@ public class CarService : ICarService
 
     public async Task<IEnumerable<CarDto>> GetAllCarsAsync()
     {
-        return await _carRepository.GetAll().Select(c => new CarDto(c.CarPlate,c.RentalPrice, c.ClientId, c.Client.Name ,null)).ToListAsync();
+        return await _carRepository.GetAll().Select(c => new CarDto(c.CarPlate, c.ClientId, c.Client.Name ,null)).ToListAsync();
     }
 
     public async Task<CarDto?> GetCarByPlateAsync(string carPlate)
     {
         var car = await _carRepository.GetAll().Where(x=>x.CarPlate ==carPlate).FirstOrDefaultAsync();
-        return car == null ? null : new CarDto(car.CarPlate,car.RentalPrice, car.ClientId, car.Client?.Name ,null);
+        return car == null ? null : new CarDto(car.CarPlate, car.ClientId, car.Client?.Name ,null);
     }
 
     public async Task<CarDto> CreateCarAsync(CreateCarDto dto)
@@ -37,7 +38,7 @@ public class CarService : ICarService
         var car = new Car { CarPlate = dto.CarPlate ,Brand =dto.Brand ,Model =dto.Model , Year = dto.Year ,ChassisNumber =dto.ChassisNumber};
         await _carRepository.AddAsync(car);
         await _carRepository.SaveChanges();
-        return new CarDto(car.CarPlate,car.RentalPrice, null, null,null);
+        return new CarDto(car.CarPlate, null, null,null);
     }
 
     public async Task AssignCarToUserAsync(AssignCarToUserDto dto)
@@ -75,86 +76,88 @@ public class CarService : ICarService
     {
         var car = await _carRepository.GetAll().Where(x => x.CarPlate == carPlate).FirstAsync()
             ?? throw new KeyNotFoundException($"Car '{carPlate}' not found.");
-
-        car.RentalPrice = rentalPrice;
         await _carRepository.UpdateAsync(car);
         await _carRepository.SaveChanges();
     }
 
     public async Task<PagedResult<CarDto>> GetAllWithDebts(int page, int pageSize)
     {
-        try
+        var query = _carRepository.GetAll()
+            .Include(c => c.Client)
+                .ThenInclude(cl => cl.Payments)   // ← need client payments for rental
+            .Include(c => c.Fines)
+            .Include(c => c.EntranceFees);
+
+        var totalCount = await query.CountAsync();
+
+        var cars = await query
+            .OrderBy(c => c.CarPlate)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var result = new List<CarDto>();
+
+        foreach (var car in cars)
         {
-            var query = _carRepository.GetAll()
-                .Include(c => c.Client)
-                .Include(c => c.Fines)
-                .Include(c => c.EntranceFees)
-                .Include(c => c.Payments);
+            // ── Unpaid fines ──────────────────────────────────────────────────
+            var unpaidFines = car.Fines
+                .Where(f => !f.IsPaid)
+                .Sum(f => f.Amount);
 
-            var totalCount = await query.CountAsync();
+            // ── Unpaid entrance fees ──────────────────────────────────────────
+            var unpaidEntrance = car.EntranceFees
+                .Where(e => !e.IsPaid)
+                .Sum(e => e.Amount);
 
-            var cars = await query
-                .OrderBy(c => c.CarPlate)
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .ToListAsync();
+            // ── Unpaid monthly rental from schedule ───────────────────────────
+            decimal unpaidMonthly = 0;
 
-            var today = DateOnly.FromDateTime(DateTime.Today);
-
-            var result = new List<CarDto>();
-
-            foreach (var car in cars)
+            var client = car.Client;
+            if (client?.PaymentScheduleJson is not null)
             {
-                var unpaidFines = car.Fines
-      .Where(f => !f.IsPaid)
-      .Sum(f => f.Amount);
+                // Deserialize — expects: [{ "year": 2026, "month": 5, "rentalPrice": 1500 }, ...]
+                var schedule = JsonSerializer.Deserialize<List<ScheduleEntry>>(
+                    client.PaymentScheduleJson,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                ) ?? [];
 
-                var unpaidEntrance = car.EntranceFees
-                    .Where(e => !e.IsPaid)
-                    .Sum(e => e.Amount);
+                // Build a lookup of how much rental has already been paid, keyed by (year, month)
+                var paidByMonth = client.Payments
+                    .GroupBy(p => (p.PaidAt.Year, p.PaidAt.Month))
+                    .ToDictionary(g => g.Key, g => g.Sum(p => p.Amount));
 
-                decimal unpaidMonthly = 0;
-                int unpaidMonths = 0;
-
-                if (car.Client != null && car.RentalPrice.HasValue && car.RentalPrice > 0)
+                foreach (var entry in schedule)
                 {
-                    var joinDate = car.Client.JoinDate;
+                    var entryDate = new DateOnly(entry.Year, entry.Month, 1);
 
-                    var start = new DateOnly(joinDate.Year, joinDate.Month, 1);
-                    var current = new DateOnly(today.Year, today.Month, 1);
+                    // Only count months that are due (on or before today)
+                    if (entryDate > today) continue;
 
-                    var months = ((current.Year - start.Year) * 12) + (current.Month - start.Month) + 1;
+                    var paid = paidByMonth.GetValueOrDefault((entry.Year, entry.Month), 0);
+                    var remaining = entry.RentalPrice - paid;
 
-                    if (months > 0)
-                    {
-                        unpaidMonthly = months * car.RentalPrice.Value;
-                        unpaidMonths = months;
-                    }
+                    if (remaining > 0)
+                        unpaidMonthly += remaining;
                 }
-
-                var total = unpaidFines + unpaidEntrance + unpaidMonthly;
-
-                result.Add(new CarDto(
-                    CarPlate: car.CarPlate,
-                    UserName: car.Client?.Name,
-                    RentalPrice: car.RentalPrice ?? 0,
-                    Totaldebs: total,
-                    UserId: car.ClientId
-                ));
             }
 
-            var ordered = result.OrderByDescending(c => c.Totaldebs).ToList();
+            var total = unpaidFines + unpaidEntrance + unpaidMonthly;
 
-            return new PagedResult<CarDto>(
-                ordered,
-                totalCount,
-                page,
-                pageSize
-            );
+            result.Add(new CarDto(
+                CarPlate: car.CarPlate,
+                UserName: client?.Name,
+                Totaldebs: total,
+                UserId: car.ClientId
+            ));
         }
-        catch (Exception ex)
-        {
-            throw;
-        }
+
+        var ordered = result.OrderByDescending(c => c.Totaldebs).ToList();
+
+        return new PagedResult<CarDto>(ordered, totalCount, page, pageSize);
     }
+
+    // ── Local DTO for deserializing the schedule JSON ─────────────────────────────
+    private sealed record ScheduleEntry(int Year, int Month, decimal RentalPrice);
 }

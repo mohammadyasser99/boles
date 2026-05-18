@@ -13,14 +13,17 @@ namespace CarRental.Application.DTOs
         EntranceFees = 3
     }
     public record CreateMonthlyRentalPaymentRequestDtos(Guid UserId, string CarPlate , decimal Amount , DateOnly PaidAt,
-            PaymentType PaymentType , string? ViolationNumber , string? TripNumber);
+            PaymentType PaymentType , string? ViolationNumber , string? TripNumber,DateTime? ViolationDate);
     public record CreateMonthlyRentalPaymentResponseDtos(Guid Id);
+    // DTOs/CarMonthlyRowDto.cs  — RentalPrice is now per-row (from schedule JSON)
     public record CarMonthlyRowDto(
         int Year,
         int Month,
-        decimal RentalPrice,
-        decimal RentalIncome,
-        string? PaymentDate,       // "yyyy-MM-dd" or null
+        string? PaymentDate,
+        decimal RentalPrice,          // ← per-row scheduled amount (was one global field)
+        decimal RentalPaid,           // ← from schedule JSON
+        decimal FinesPaid,            // ← from Payment table (unchanged)
+        decimal EntranceFeesPaid,     // ← from Payment table (unchanged)
         decimal AmountPaid,
         decimal TotalFines,
         int FinesCount,
@@ -28,18 +31,19 @@ namespace CarRental.Application.DTOs
         int EntranceFeesCount
     );
 
+    // DTOs/CarSummaryDto.cs
     public record CarSummaryDto(
+        Guid ClientId,             // ← NEW: needed to POST rental payments
         string CarPlate,
         string? Brand,
         string? Model,
-        int? CarYear,              // manufacturing year — avoids clash with row Year
-        decimal RentalPrice,
+        int? CarYear,
+        // RentalPrice ← REMOVED (now per-row)
         List<CarMonthlyRowDto> Rows,
-        DateOnly? JoinDate,
-        string UserName
-    
+        DateOnly JoinDate,
+        DateOnly ContractExpiry,
+        string? UserName
     );
-
 
     public record UpdateMonthlyRentalPaymentRequestDto(
     decimal Amount,

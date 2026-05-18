@@ -43,25 +43,30 @@ export interface CreateCarRequest {   carPlate: string;
   chassisNumber?: string; }
 export interface AssignCarRequest { carPlate: string; userId: string; }
 export interface CarMonthlyRowDto {
-  year: number;
-  month: number;
-  rentalPrice: number;
-  paymentDate: string | null;
-  amountPaid: number;
-  totalFines: number;
-  finesCount: number;
+  year:              number;
+  month:             number;
+  paymentDate:       string | null;
+  rentalPrice:       number;        // ← per-row scheduled amount (from JSON)
+  rentalPaid:        number;        // ← from JSON
+  finesPaid:         number;        // ← from Payment table
+  entranceFeesPaid:  number;        // ← from Payment table
+  amountPaid:        number;
+  totalFines:        number;
+  finesCount:        number;
   totalEntranceFees: number;
   entranceFeesCount: number;
 }
 export interface CarSummaryDto {
-  carPlate: string;
-  brand: string | null;
-  model: string | null;
-  carYear: number | null;
-  rentalPrice: number;
-  rows: CarMonthlyRowDto[];
-  joinDate: string | null;
-  userName:string
+  clientId:       string;           // ← NEW
+  carPlate:       string;
+  brand:          string | null;
+  model:          string | null;
+  carYear:        number | null;
+  // rentalPrice ← removed from summary level
+  rows:           CarMonthlyRowDto[];
+  joinDate:       string;
+  contractExpiry: string;
+  userName:       string | null;
 }
 export interface MonthlyRentalPaymentDto {
   id: string;
@@ -71,13 +76,16 @@ export interface MonthlyRentalPaymentDto {
   userId: string;
 }
 export interface CreateMonthlyRentalPaymentRequestDto {
+  userId: string;
+  carPlate: string;
   amount: number;
   paidAt: string;
-  carPlate: string;
-  userId: string;
-  paymentType:string;
-  violationNumber?: string;
-  tripNumber?: string;
+  paymentType: number;
+
+  violationNumber?: string | null;
+  violationDate?: string | null;
+
+  tripNumber?: string | null;
 }
 export interface UpdateMonthlyRentalPaymentRequestDto {
   amount: number;
@@ -92,6 +100,7 @@ export interface CreateAdminRequest { name: string; username: string; password: 
 export interface CarFine {
   violationNumber: string;
   amount: number;
+  violationDate: string;
 }
 
 export interface TotalFinesForCar {

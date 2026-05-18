@@ -61,7 +61,7 @@ namespace CarRental.Application.Services
                 {
                     var existing = await _carRepository.GetAll().Where(x => x.CarPlate == plate).FirstOrDefaultAsync();
                     if (existing == null)
-                        await _carRepository.AddAsync(new Car { CarPlate = plate, RentalPrice = 0 });
+                        await _carRepository.AddAsync(new Car { CarPlate = plate });
                 }
 
                 // Step 2: Insert entrance fees

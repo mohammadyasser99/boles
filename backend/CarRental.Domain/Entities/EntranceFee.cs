@@ -17,6 +17,7 @@ namespace CarRental.Domain.Entities
 
         /// <summary>المبلغ (درهم إماراتي) - amount in AED</summary>
         public decimal Amount { get; set; }
+        public decimal? PaidAmount { get; set; }
 
         public string? GateName { get; set; }
         public string? Direction { get; set; }

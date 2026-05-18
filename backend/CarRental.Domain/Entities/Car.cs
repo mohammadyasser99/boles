@@ -7,8 +7,6 @@ public class Car
     public string? Model { get; set; } 
     public int? Year { get; set; }
     public string? ChassisNumber { get; set; }
-    public decimal? RentalPrice { get; set; }
-
     // FK
     public Guid? ClientId { get; set; }
     public virtual Client? Client { get; set; }

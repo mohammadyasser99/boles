@@ -46,7 +46,13 @@ private fineService = inject(FineService);
     { label: 'Entrance Fees Payment', value: 3 }
   ];
 feeOptions = signal<{ label: string; value: string; amount: number }[]>([]);
-  fineOptions = signal<{ label: string; value: string; amount: number }[]>([]);
+  fineOptions = signal<{
+  label: string;
+  value: string;
+  amount: number;
+  violationDate: string;
+}[]>([]);
+
 selectedFineAmount = signal<number>(0);
   payments = signal<MonthlyRentalPaymentDto[]>([]);
   loading = signal(false);
@@ -71,15 +77,16 @@ private allCars = signal<{ carPlate: string; userId: string | null }[]>([]);
     this.loadCars();
   }
 initForm() {
-  this.form = this.fb.group({
-    userId: [''],
-    carPlate: [''],
-    amount: [null, Validators.required],
-    paidAt: [null, Validators.required],
-    paymentType: [null, Validators.required],
-    violationNumber: [''],
-    tripNumber: ['']
-  });
+this.form = this.fb.group({
+  userId: [''],
+  carPlate: [''],
+  amount: [null, Validators.required],
+  paidAt: [null, Validators.required],
+  paymentType: [null, Validators.required],
+  violationNumber: [''],
+  violationDate: [''],
+  tripNumber: ['']
+});
 }
 
   loadPayments(): void {
@@ -129,11 +136,12 @@ initForm() {
   this.fineService.getDebtByPlate(carPlate).subscribe({
     next: res => {
       if (res.success && res.data) {
-        const fines = res.data.fines.map(f => ({
-          label: `${f.violationNumber} - ${f.amount} EGP`,
-          value: f.violationNumber,
-          amount: f.amount
-        }));
+const fines = res.data.fines.map(f => ({
+  label: `${f.violationNumber} - ${f.amount} EGP`,
+  value: f.violationNumber,
+  amount: f.amount,
+  violationDate: f.violationDate
+}));
 
         this.fineOptions.set(fines);
       }
@@ -208,15 +216,16 @@ this.form.get('tripNumber')?.valueChanges.subscribe(v => {
 });
 
   // Auto fill amount when fine selected
-  this.form.get('violationNumber')?.valueChanges.subscribe(v => {
-    const fine = this.fineOptions().find(f => f.value === v);
+this.form.get('violationNumber')?.valueChanges.subscribe(v => {
+  const fine = this.fineOptions().find(f => f.value === v);
 
-    if (fine) {
-      this.form.patchValue({
-        amount: fine.amount
-      });
-    }
-  });
+  if (fine) {
+    this.form.patchValue({
+      amount: fine.amount,
+      violationDate: fine.violationDate
+    });
+  }
+});
 }
   openEdit(payment: MonthlyRentalPaymentDto): void {
     this.editMode.set(true);
@@ -286,20 +295,23 @@ save(): void {
         amount: formValue.amount,
         paidAt
       })
-    : this.paymentService.create({
+  : this.paymentService.create({
     amount: formValue.amount,
     paidAt,
     carPlate: formValue.carPlate,
     userId: formValue.userId,
     paymentType: formValue.paymentType,
 
-    // append only for fines payment
     violationNumber:
       formValue.paymentType === 2
         ? formValue.violationNumber
         : null,
 
-    // append only for entrance fees payment
+    violationDate:
+      formValue.paymentType === 2
+        ? formValue.violationDate
+        : null,
+
     tripNumber:
       formValue.paymentType === 3
         ? formValue.tripNumber
@@ -321,12 +333,14 @@ save(): void {
         this.loadPayments();
       }
     },
-    error: () => {
+    error: (err) => {
+      console.log(err);
+      
       this.saving.set(false);
       this.toast.add({
         severity: 'error',
         summary: 'Error',
-        detail: 'Operation failed.'
+        detail: err.error.message
       });
     }
   });

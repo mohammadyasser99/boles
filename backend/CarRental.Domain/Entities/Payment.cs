@@ -14,7 +14,9 @@ namespace CarRental.Domain.Entities
         public decimal Amount { get; set; }
 
         public DateOnly PaidAt { get; set; }
-        public PaymentType PaymentType { get; set; }   // ✅ ADD THIS
+        public PaymentType PaymentType { get; set; }  
+        public string? TripNumber { get; set; }
+        public string? ViolationNumber { get; set; }
 
         public virtual Car Car { get; set; }
         public virtual Client User { get; set; }

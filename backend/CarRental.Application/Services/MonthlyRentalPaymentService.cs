@@ -9,8 +9,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.ConstrainedExecution;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
-
+using static System.Net.WebRequestMethods;
+// Top of your service file
 namespace CarRental.Application.Services
 {
     public class MonthlyRentalPaymentService : IMonthlyRentalPaymentService
@@ -56,44 +58,41 @@ namespace CarRental.Application.Services
                 if (request.PaymentType == PaymentType.MonthlyRental)
                 {
 
+                    var monthlypayment = new AddRentalPaymentDto(request.PaidAt.Month , request.PaidAt.Year,request.Amount);
+                    await AddRentalPaymentAsync(request.UserId, monthlypayment);
 
-                    var payment = new Payment
-                    {
-                        Id = Guid.NewGuid(),
-                        Amount = request.Amount,
-                        PaidAt = request.PaidAt,
-                        Car = car,
-                        User = user,
-                        PaymentType = (Domain.Enums.PaymentType)request.PaymentType
-                    };
-
-                    await _paymentRepository.AddAsync(payment);
-                    await _unitOfWork.SaveChangesAsync();
-                    return new CreateMonthlyRentalPaymentResponseDtos(payment.Id);
+                    return new CreateMonthlyRentalPaymentResponseDtos(new Guid());
                 }else if (request.PaymentType ==PaymentType.Fines)
                 {
                     var fine =await _fineRepository.GetAll().Where(x => x.ViolationNumber == request.ViolationNumber).FirstOrDefaultAsync();
+
+  
                     if (fine !=null)
                     {
-                        if (fine.Amount ==request.Amount)
+                        if ((fine.PaidAmount ?? 0) + request.Amount <= fine.Amount)
                         {
-                            fine.IsPaid = true;
-                            await _fineRepository.UpdateAsync(fine);
+                            fine.PaidAmount = (fine.PaidAmount ?? 0) + request.Amount;
                         }
                         else
                         {
-                            fine.Amount = fine.Amount - request.Amount;
-                            await _fineRepository.UpdateAsync(fine);
+                            throw new Exception($"you must enter a numbber less than {fine.Amount-(fine.PaidAmount ??0)}");
+                        }
+                        if (fine.PaidAmount == fine.Amount)
+                        {
+                            fine.IsPaid = true;
                         }
                     }
                     var payment = new Payment
                     {
                         Id = Guid.NewGuid(),
                         Amount = request.Amount,
-                        PaidAt = request.PaidAt,
+                        PaidAt = request.ViolationDate.HasValue
+    ? DateOnly.FromDateTime(request.ViolationDate.Value)
+    : request.PaidAt,
                         Car = car,
                         User = user,
-                        PaymentType = (Domain.Enums.PaymentType)request.PaymentType
+                        PaymentType = (Domain.Enums.PaymentType)request.PaymentType,
+                        ViolationNumber = request.ViolationNumber,
                     };
 
                     await _paymentRepository.AddAsync(payment);
@@ -104,18 +103,32 @@ namespace CarRental.Application.Services
                 else
                 {
                     var entrancefee = await _entrancefeeRepository.GetAll().Where(x=>x.TripNumber == request.TripNumber).FirstOrDefaultAsync();
-                    if (entrancefee !=null)
+                    if (entrancefee != null)
                     {
-                        entrancefee.Amount =entrancefee.Amount - request.Amount;
+                        if ((entrancefee.PaidAmount ?? 0) + request.Amount <= entrancefee.Amount)
+                        {
+                            entrancefee.PaidAmount = (entrancefee.PaidAmount ?? 0) + request.Amount;
+                        }
+                        else
+                        {
+                            throw new Exception($"you must enter a numbber less than {entrancefee.Amount - entrancefee.PaidAmount}");
+                        }
+                        if (entrancefee.PaidAmount == entrancefee.Amount)
+                        {
+                            entrancefee.IsPaid = true;
+                        }
                     }
                     var payment = new Payment
                     {
                         Id = Guid.NewGuid(),
                         Amount = request.Amount,
-                        PaidAt = request.PaidAt,
+                        PaidAt = entrancefee.TripDate.HasValue
+    ? DateOnly.FromDateTime(entrancefee.TripDate.Value)
+    : request.PaidAt,
                         Car = car,
                         User = user,
-                        PaymentType = (Domain.Enums.PaymentType)request.PaymentType
+                        PaymentType = (Domain.Enums.PaymentType)request.PaymentType,
+                        TripNumber = request.TripNumber
                     };
 
                     await _paymentRepository.AddAsync(payment);
@@ -124,17 +137,10 @@ namespace CarRental.Application.Services
 
                 }
 
-
-                //if the amount is fines
-
-                //if the amount is entrance fees
-
-
-
             }
             catch (Exception ex)
             {
-                return null;
+                throw ex;
             }
 
 
@@ -143,115 +149,192 @@ namespace CarRental.Application.Services
 
         public async Task<CarSummaryDto> GetMonthlySummaryAsync(string carPlate)
         {
-            // ── 1. Car ────────────────────────────────────────────────────────
+            // ── 1. Car ────────────────────────────────────────────────────────────
             var car = await _carRepository
                 .GetAll()
+                .Include(c => c.Client)
                 .FirstOrDefaultAsync(c => c.CarPlate == carPlate)
                 ?? throw new KeyNotFoundException($"Car '{carPlate}' not found.");
 
-            DateOnly? joinDate = car.Client.JoinDate;
-            decimal monthlyRental = car.RentalPrice ?? 0;
-            // ── 2. Fetch related data ─────────────────────────────────────────
+            var client = car.Client;
+
+            // ── 2. Load rental schedule from JSON ─────────────────────────────────
+            var schedule = string.IsNullOrEmpty(client.PaymentScheduleJson)
+        ? new List<PaymentScheduleItem>()
+        : JsonSerializer.Deserialize<List<PaymentScheduleItem>>(
+              client.PaymentScheduleJson,
+              new JsonSerializerOptions { PropertyNameCaseInsensitive = true }  // ← ADD
+          )!;
+
+            var scheduleByMonth = schedule.ToDictionary(s => (s.Year, s.Month));
+
+            // ── 3. Fines — unchanged: total from table, paid from Payment table ───
+            var fines = await _fineRepository
+                .GetAll()
+                .Where(f => f.CarPlate == carPlate && f.ViolationDate.HasValue)
+                .ToListAsync();
+
+            var finesByMonth = fines
+                .GroupBy(f => (f.ViolationDate!.Value.Year, f.ViolationDate.Value.Month))
+                .ToDictionary(
+                    g => g.Key,
+                    g => (Total: g.Sum(f => f.Amount), Count: g.Count()));
+
+            // ── 4. Entrance fees — unchanged ──────────────────────────────────────
+            var fees = await _entrancefeeRepository
+                .GetAll()
+                .Where(e => e.CarPlate == carPlate && e.TripDate.HasValue)
+                .ToListAsync();
+
+            var feesByMonth = fees
+                .GroupBy(e => (e.TripDate!.Value.Year, e.TripDate.Value.Month))
+                .ToDictionary(
+                    g => g.Key,
+                    g => (Total: g.Sum(e => e.Amount), Count: g.Count()));
+
+            // ── 5. Fines PAID — from Payment table grouped by violation month ──────
+            var violationDateByNumber = fines
+                .Where(f => f.ViolationNumber != null)
+                .ToDictionary(f => f.ViolationNumber!, f => f.ViolationDate!.Value);
+
             var payments = await _paymentRepository
                 .GetAll()
                 .Where(p => p.Car.CarPlate == carPlate)
                 .ToListAsync();
 
-            var fines = await _fineRepository
-                .GetAll()
-                .Where(f => f.CarPlate == carPlate && f.ViolationDate.HasValue && !f.IsPaid)
-                .ToListAsync();
+            var finesPaidByViolationMonth = payments
+                .Where(p => p.PaymentType == (Domain.Enums.PaymentType)PaymentType.Fines
+                            && p.ViolationNumber != null
+                            && violationDateByNumber.ContainsKey(p.ViolationNumber!))
+                .GroupBy(p => (
+                    violationDateByNumber[p.ViolationNumber!].Year,
+                    violationDateByNumber[p.ViolationNumber!].Month))
+                .ToDictionary(g => g.Key, g => g.Sum(p => p.Amount));
 
-            var fees = await _entrancefeeRepository
-                .GetAll()
-                .Where(e => e.CarPlate == carPlate && e.TripDate.HasValue && !e.IsPaid)
-                .ToListAsync();
+            // ── 6. Entrance fees PAID — from Payment table grouped by trip month ───
+            var tripDateByNumber = fees
+                .Where(e => e.TripNumber != null)
+                .ToDictionary(e => e.TripNumber!, e => e.TripDate!.Value);
 
-            // ── 3. Group by (year, month) ─────────────────────────────────────
-            var finesByMonth = fines
-                .GroupBy(f => (f.ViolationDate!.Value.Year, f.ViolationDate.Value.Month))
-                .ToDictionary(g => g.Key, g => (Total: g.Sum(f => f.Amount), Count: g.Count()));
+            var feesPaidByTripMonth = payments
+                .Where(p => p.PaymentType == (Domain.Enums.PaymentType)PaymentType.EntranceFees
+                            && p.TripNumber != null
+                            && tripDateByNumber.ContainsKey(p.TripNumber!))
+                .GroupBy(p => (
+                    tripDateByNumber[p.TripNumber!].Year,
+                    tripDateByNumber[p.TripNumber!].Month))
+                .ToDictionary(g => g.Key, g => g.Sum(p => p.Amount));
 
-            var feesByMonth = fees
-                .GroupBy(e => (e.TripDate!.Value.Year, e.TripDate.Value.Month))
-                .ToDictionary(g => g.Key, g => (Total: g.Sum(e => e.Amount), Count: g.Count()));
+            // ── 7. Build rows ─────────────────────────────────────────────────────
+            var startDate = new DateOnly(client.JoinDate.Year, client.JoinDate.Month, 1);
+            var endDate = new DateOnly(client.ContractExpiry.Year, client.ContractExpiry.Month, 1);
 
-            var paymentsByMonth = payments
-                .GroupBy(p => (p.PaidAt.Year, p.PaidAt.Month))
-                .ToDictionary(g => g.Key, g => (
-                    Amount: g.Sum(p => p.Amount),
-                    PaidAt: g.Max(p => p.PaidAt)
+            var rows = new List<CarMonthlyRowDto>();
+            var cursor = startDate;
+
+            while (cursor <= endDate)
+            {
+                var year = cursor.Year;
+                var month = cursor.Month;
+                var key = (year, month);
+
+                scheduleByMonth.TryGetValue(key, out var sched);
+                finesByMonth.TryGetValue(key, out var fineData);
+                feesByMonth.TryGetValue(key, out var feeData);
+                finesPaidByViolationMonth.TryGetValue(key, out var finesPaid);
+                feesPaidByTripMonth.TryGetValue(key, out var feesPaid);
+
+                // ── Rental: both scheduled amount and paid amount come from JSON ──
+                var rentalPrice = sched?.Amount ?? 0m;
+                var rentalPaid = sched?.RentalPaid ?? 0m;
+
+                var totalPaid = rentalPaid + finesPaid + feesPaid;
+
+                // Latest payment date across all payment types this month (display only)
+                var latestDate = payments
+                    .Where(p => p.PaidAt.Year == year && p.PaidAt.Month == month)
+                    .Select(p => (DateTime?)p.PaidAt.ToDateTime(TimeOnly.MinValue))
+                    .DefaultIfEmpty(sched?.PaidAt)
+                    .Max();
+
+                rows.Add(new CarMonthlyRowDto(
+                    Year: year,
+                    Month: month,
+                    PaymentDate: latestDate?.ToString("yyyy-MM-dd"),
+                    RentalPrice: rentalPrice,
+                    RentalPaid: rentalPaid,
+                    FinesPaid: finesPaid,
+                    EntranceFeesPaid: feesPaid,
+                    AmountPaid: totalPaid,
+                    TotalFines: fineData.Total,
+                    FinesCount: fineData.Count,
+                    TotalEntranceFees: feeData.Total,
+                    EntranceFeesCount: feeData.Count
                 ));
 
-            // ── 4. Year range ─────────────────────────────────────────────────
-            var allYears = finesByMonth.Keys
-                .Concat(feesByMonth.Keys)
-                .Concat(paymentsByMonth.Keys)
-                .Select(k => k.Year)
-                .Append(DateTime.UtcNow.Year)
-                .Distinct()
-                .OrderBy(y => y);
-
-            // ── 5. Build rows ─────────────────────────────────────────────────
-            // Uses foreach + nested for so TryGetValue out-vars are properly in scope.
-            // LINQ query expressions do NOT expose out-var from TryGetValue to
-            // subsequent clauses — that is why the original version errored.
-            var rows = new List<CarMonthlyRowDto>();
-
-            foreach (var year in allYears)
-            {
-                for (var month = 1; month <= 12; month++)
-                {
-                    var key = (year, month);
-
-                    var hasFines = finesByMonth.TryGetValue(key, out var fineData);
-                    var hasFees = feesByMonth.TryGetValue(key, out var feeData);
-                    var hasPay = paymentsByMonth.TryGetValue(key, out var payData);
-
-                    // Skip months with no activity unless it is the current year
-                    if (!hasFines && !hasFees && !hasPay && year != DateTime.UtcNow.Year)
-                        continue;
-
-                    decimal rentalForMonth = 0;
-
-                    if (joinDate.HasValue && monthlyRental > 0)
-                    {
-                        var join = new DateOnly(joinDate.Value.Year, joinDate.Value.Month, 1);
-                        var currentMonth = new DateOnly(year, month, 1);
-
-                        if (currentMonth >= join)
-                        {
-                            rentalForMonth = monthlyRental;
-                        }
-                    }
-
-                    rows.Add(new CarMonthlyRowDto(
-                        Year: year,
-                        Month: month,
-                        RentalPrice: car.RentalPrice ?? 0,
-                        RentalIncome: rentalForMonth,
-                        PaymentDate: hasPay ? payData.PaidAt.ToString("yyyy-MM-dd") : null,
-                        AmountPaid: hasPay ? payData.Amount : 0,
-                        TotalFines: hasFines ? fineData.Total : 0,
-                        FinesCount: hasFines ? fineData.Count : 0,
-                        TotalEntranceFees: hasFees ? feeData.Total : 0,
-                        EntranceFeesCount: hasFees ? feeData.Count : 0
-                    ));
-                }
+                cursor = cursor.AddMonths(1);
             }
 
             return new CarSummaryDto(
+                ClientId: client.Id,
                 CarPlate: car.CarPlate,
                 Brand: car.Brand,
                 Model: car.Model,
                 CarYear: car.Year,
-                RentalPrice: car.RentalPrice ?? 0,
                 Rows: rows,
-                JoinDate: car.Client.JoinDate,
-                UserName:car.Client.Name
+                JoinDate: client.JoinDate,
+                ContractExpiry: client.ContractExpiry,
+                UserName: client.Name
             );
         }
 
+        // ── Add a (partial or full) rental payment for one month ──────────────────
+        public async Task AddRentalPaymentAsync(Guid clientId, AddRentalPaymentDto dto)
+        {
+            if (dto.Amount <= 0)
+                throw new Exception("Payment amount must be greater than zero.");
+
+            var client = await _userRepository.GetAll()
+                .Include(c => c.Cars)
+                .FirstOrDefaultAsync(x => x.Id == clientId)
+                ?? throw new Exception("Client not found.");
+
+            // ── Update schedule JSON ───────────────────────────────────────────
+            var schedule = string.IsNullOrEmpty(client.PaymentScheduleJson)
+                ? new List<PaymentScheduleItem>()
+                : JsonSerializer.Deserialize<List<PaymentScheduleItem>>(client.PaymentScheduleJson)!;
+
+            var entry = schedule.FirstOrDefault(p => p.Month == dto.Month && p.Year == dto.Year)
+                ?? throw new Exception($"No rental schedule entry for {dto.Month}/{dto.Year}.");
+
+            var remaining = entry.Amount - entry.RentalPaid;
+
+            if (dto.Amount > remaining)
+                throw new Exception(
+                    $"Over-payment: only {remaining:F2} EGP remaining for {dto.Month}/{dto.Year}.");
+
+            entry.RentalPaid += dto.Amount;
+            entry.IsPaid = entry.RentalPaid >= entry.Amount;
+            entry.PaidAt = DateTime.UtcNow;
+
+            client.PaymentScheduleJson = JsonSerializer.Serialize(schedule);
+
+            // ── Also insert a Payment record for audit trail ───────────────────
+            var car = client.Cars.FirstOrDefault()
+                ?? throw new Exception("No car linked to this client.");
+
+            await _paymentRepository.AddAsync(new Payment
+            {
+                Id = Guid.NewGuid(),
+                Amount = dto.Amount,
+                PaidAt = DateOnly.FromDateTime(DateTime.UtcNow),
+                PaymentType = (Domain.Enums.PaymentType)PaymentType.MonthlyRental,
+                Car = car,
+                User = client
+            });
+
+            await _unitOfWork.SaveChangesAsync();
+        }
         public async Task UpdateAsync(Guid id, UpdateMonthlyRentalPaymentRequestDto request)
         {
             var payment = await _paymentRepository.GetByIdAsync(id)

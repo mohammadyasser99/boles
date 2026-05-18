@@ -87,6 +87,7 @@ export class UsersComponent implements OnInit {
       phoneNumber: ['', Validators.required],
       nationalId: ['', Validators.required],
       joinDate: [null, Validators.required],
+      contractExpiry: [null, Validators.required],
       dateOfPayment :[null]
     });
   }
@@ -117,6 +118,7 @@ onFileSelected(event: any, index: number): void {
       phoneNumber: '',
       nationalId: '',
       joinDate: null,
+      contractExpiry: null,
       dateOfPayment:null
     });
   
@@ -128,7 +130,6 @@ onFileSelected(event: any, index: number): void {
   openEdit(user: any): void {
     this.editMode.set(true);
     this.editId = user.id;
-  
     this.userForm.patchValue({
       name: user.name || '',
       email: user.email || '',
@@ -137,12 +138,16 @@ onFileSelected(event: any, index: number): void {
       joinDate: user.joinDate
       ? user.joinDate.toString().split('T')[0]
       : null,
-    
+      
+          contractExpiry: user.contractExpiry
+      ? user.contractExpiry.toString().split('T')[0]
+      : null,
+
     dateOfPayment: user.dateOfPayment
       ? user.dateOfPayment.toString().split('T')[0]
       : null
     });
-  
+  debugger;
     this.documents = (user.documents || []).map((d: any) => ({
       id: d.id,
       file: null,
@@ -206,6 +211,10 @@ onFileSelected(event: any, index: number): void {
       formData.append('joinDate', formValue.joinDate);
     }
     
+        if (formValue.contractExpiry) {
+      formData.append('contractExpiry', formValue.contractExpiry);
+    }
+
     if (formValue.dateOfPayment) {
       formData.append('dateOfPayment', formValue.dateOfPayment);
     }

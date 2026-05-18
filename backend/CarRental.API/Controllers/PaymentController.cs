@@ -1,6 +1,7 @@
 ﻿using CarRental.Application.Common;
 using CarRental.Application.DTOs;
 using CarRental.Application.Interfaces;
+using CarRental.Application.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -96,6 +97,8 @@ namespace CarRental.API.Controllers
                 return BadRequest(ApiResponse<object>.Fail(ex.Message));
             }
         }
+
+
 
     }
 }

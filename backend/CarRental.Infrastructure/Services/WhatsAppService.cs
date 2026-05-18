@@ -64,7 +64,7 @@ namespace CarRental.Infrastructure.Services
 
             var totalFines = await _fineRepository.GetAll().Where(x=>x.CarPlate==carPlate && x.IsPaid ==false).SumAsync(x=>x.Amount);
             var totalEntranceFees = await _entranceFeeRepository.GetAll().Where(x => x.CarPlate == carPlate && x.IsPaid == false).SumAsync(x => x.Amount);
-            var totalDebt = totalFines + totalEntranceFees + (car.RentalPrice ?? 0);
+            var totalDebt = totalFines + totalEntranceFees ;
 
             var message = BuildDebtReminderMessage(user.Name, carPlate, totalFines, totalEntranceFees, 0, totalDebt);
 
@@ -116,13 +116,13 @@ namespace CarRental.Infrastructure.Services
                 .Where(x => x.CarPlate == carPlate && x.IsPaid == false)
                 .SumAsync(x => x.Amount);
 
-            var totalDebt = totalFines + totalEntranceFees + (car.RentalPrice ?? 0);
+            var totalDebt = totalFines + totalEntranceFees ;
 
             var mailData = new MailData
             {
                 RecieverMail = user.Email,
                 EmailSubject = $"Payment Reminder – Vehicle {carPlate}",
-                EmailBody = BuildDebtReminderEmailBody(user.Name, carPlate, totalFines, totalEntranceFees, car.RentalPrice ?? 0, totalDebt)
+                EmailBody = BuildDebtReminderEmailBody(user.Name, carPlate, totalFines, totalEntranceFees, totalDebt)
             };
 
             var sent = _mailManager.SendMail(mailData);
@@ -138,7 +138,6 @@ namespace CarRental.Infrastructure.Services
             string carPlate,
             decimal fines,
             decimal entranceFees,
-            decimal rentalPrice,
             decimal totalDebt)
         {
             return $@"<!DOCTYPE html>
@@ -168,7 +167,6 @@ namespace CarRental.Infrastructure.Services
       <span class=""plate"">{carPlate}</span>
     </div>
     <table class=""breakdown"">
-      <tr><td>Monthly Rental</td><td>{rentalPrice:N2} AED</td></tr>
       <tr><td>Traffic Fines</td><td>{fines:N2} AED</td></tr>
       <tr><td>City Toll Fees</td><td>{entranceFees:N2} AED</td></tr>
       <tr class=""total-row""><td>Total Due</td><td>{totalDebt:N2} AED</td></tr>

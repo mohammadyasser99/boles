@@ -2,30 +2,22 @@
 
 <form [formGroup]="form" class="max-w-4xl mx-auto p-6 bg-white shadow-xl rounded-2xl space-y-6">
 
-  <h2 class="text-2xl font-bold text-gray-800">Create User & Car</h2>
+  <h2 class="text-2xl font-bold text-gray-800">
+    {{ isEditMode ? 'Edit' : 'Create' }} User & Car
+  </h2>
 
   <!-- USER -->
   <div class="grid md:grid-cols-2 gap-4">
-
-    <!-- Name -->
     <div>
       <input pInputText formControlName="name" placeholder="Name" class="w-full" />
       <small class="text-red-500 text-xs"
-        *ngIf="form.get('name')?.touched && form.get('name')?.invalid">
-        Name is required
-      </small>
+        *ngIf="form.get('name')?.touched && form.get('name')?.invalid">Name is required</small>
     </div>
-
-    <!-- Phone -->
     <div>
       <input pInputText formControlName="phoneNumber" placeholder="Phone Number" class="w-full" />
       <small class="text-red-500 text-xs"
-        *ngIf="form.get('phoneNumber')?.touched && form.get('phoneNumber')?.invalid">
-        Phone is required
-      </small>
+        *ngIf="form.get('phoneNumber')?.touched && form.get('phoneNumber')?.invalid">Phone is required</small>
     </div>
-
-    <!-- Email -->
     <div>
       <input pInputText formControlName="email" placeholder="Email" class="w-full" />
       <small class="text-red-500 text-xs"
@@ -34,125 +26,143 @@
         <span *ngIf="form.get('email')?.errors?.['email']">Invalid email</span>
       </small>
     </div>
-
-    <!-- National ID -->
     <div>
       <input pInputText formControlName="nationalId" placeholder="National ID" class="w-full" />
       <small class="text-red-500 text-xs"
-        *ngIf="form.get('nationalId')?.touched && form.get('nationalId')?.invalid">
-        National ID is required
-      </small>
+        *ngIf="form.get('nationalId')?.touched && form.get('nationalId')?.invalid">National ID is required</small>
     </div>
-
   </div>
 
-<!-- PAYMENT DATE -->
-<div>
-  <label class="block text-sm mb-1 text-gray-600">Date of Payment</label>
+  <!-- DATES -->
+  <div class="grid md:grid-cols-3 gap-4">
+    <div>
+      <label class="block text-sm mb-1 text-gray-600">Date of Payment</label>
+      <input type="date" formControlName="dateOfPayment"
+        class="w-full border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+    </div>
+    <div>
+      <label class="block text-sm mb-1 text-gray-600">Join Date</label>
+      <input type="date" formControlName="joinDate"
+        class="w-full border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+      <small class="text-red-500 text-xs"
+        *ngIf="form.get('joinDate')?.touched && form.get('joinDate')?.invalid">Join date is required</small>
+    </div>
+    <div>
+      <label class="block text-sm mb-1 text-gray-600">Contract Expiry</label>
+      <input type="date" formControlName="contractExpiry"
+        class="w-full border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+      <small class="text-red-500 text-xs"
+        *ngIf="form.get('contractExpiry')?.touched && form.get('contractExpiry')?.invalid">Contract expiry is required</small>
+    </div>
+  </div>
 
-  <input
-    type="date"
-    formControlName="dateOfPayment"
-    class="w-full border border-surface-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500">
-</div>
+  <!-- ✅ PAYMENT SCHEDULE -->
+  @if (paymentRows.length > 0) {
+    <div class="border-t pt-4 space-y-3">
+      <h3 class="text-lg font-semibold text-gray-700">
+        Payment Schedule
+        <span class="text-sm font-normal text-gray-400 ml-2">({{ paymentRows.length }} months)</span>
+      </h3>
 
-<!-- JOIN DATE -->
-<div>
-  <label class="block text-sm mb-1 text-gray-600">Join Date</label>
-
-  <input
-    type="date"
-    formControlName="joinDate"
-    class="w-full border border-surface-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500">
-
-  <small class="text-red-500 text-xs"
-    *ngIf="form.get('joinDate')?.touched && form.get('joinDate')?.invalid">
-    Join date is required
-  </small>
-</div>
+      <div class="overflow-x-auto rounded-xl border border-gray-200">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-50 text-gray-600 uppercase text-xs">
+            <tr>
+              <th class="px-4 py-3 text-left">Month</th>
+              <th class="px-4 py-3 text-left">Amount (EGP)</th>
+              <th class="px-4 py-3 text-center">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of paymentRows; track $index) {
+              <tr class="border-t border-gray-100"
+                  [class.bg-green-50]="row.isPaid"
+                  [class.bg-white]="!row.isPaid">
+                <td class="px-4 py-2 font-medium text-gray-700">{{ row.monthLabel }}</td>
+                <td class="px-4 py-2">
+                  @if (row.isPaid) {
+                    <!-- Paid — show read-only amount -->
+                    <span class="text-gray-500">{{ row.amount | number:'1.2-2' }}</span>
+                  } @else {
+                    <!-- Unpaid — editable -->
+                    <input
+                      type="number"
+                      [(ngModel)]="row.amount"
+                      [ngModelOptions]="{ standalone: true }"
+                      min="0"
+                      placeholder="0.00"
+                      class="w-32 border border-gray-300 rounded-lg px-2 py-1
+                             focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                  }
+                </td>
+                <td class="px-4 py-2 text-center">
+                  @if (row.isPaid) {
+                    <span class="inline-flex items-center gap-1 text-green-600 font-medium">
+                      <i class="pi pi-check-circle"></i> Paid
+                    </span>
+                    <p class="text-xs text-gray-400">{{ row.paidAt | date:'mediumDate' }}</p>
+                  } @else {
+                    <span class="inline-flex items-center gap-1 text-orange-500 font-medium">
+                      <i class="pi pi-clock"></i> Pending
+                    </span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
 
   <!-- CAR -->
   <div class="border-t pt-4 space-y-4">
     <h3 class="text-lg font-semibold text-gray-700">Car Info</h3>
-
     <div class="grid md:grid-cols-2 gap-4">
-
-      <!-- Car Plate -->
       <div>
-        <input pInputText formControlName="carPlate" placeholder="Car Plate" />
+        <input pInputText formControlName="carPlate" placeholder="Car Plate" class="w-full" />
         <small class="text-red-500 text-xs"
-          *ngIf="form.get('carPlate')?.touched && form.get('carPlate')?.invalid">
-          Car plate is required
-        </small>
+          *ngIf="form.get('carPlate')?.touched && form.get('carPlate')?.invalid">Car plate is required</small>
       </div>
-
-      <input pInputText formControlName="brand" placeholder="Brand" />
-      <input pInputText formControlName="modelName" placeholder="Model" />
-
-      <input type="number" formControlName="year"
-             placeholder="Year"
-             class="p-inputtext w-full"/>
-
-      <input type="number" formControlName="rentalPrice"
-             placeholder="Rental Price"
-             class="p-inputtext w-full"/>
-
-      <input pInputText formControlName="chassisNumber" placeholder="Chassis Number" />
+      <input pInputText formControlName="brand"        placeholder="Brand"          class="w-full" />
+      <input pInputText formControlName="modelName"    placeholder="Model"          class="w-full" />
+      <input type="number" formControlName="year"      placeholder="Year"           class="p-inputtext w-full" />
+      <!-- ❌ rentalPrice input removed -->
+      <input pInputText formControlName="chassisNumber" placeholder="Chassis Number" class="w-full" />
     </div>
   </div>
 
   <!-- DOCUMENTS -->
   <div class="border-t pt-4 space-y-4">
-
     <div class="flex items-center justify-between">
       <h3 class="text-lg font-semibold text-gray-700">Documents</h3>
-  
-      <button pButton type="button" icon="pi pi-plus"
-        label="Add Document"
-        class="p-button-warning"
-        (click)="addDocument()">
-      </button>
+      <button pButton type="button" icon="pi pi-plus" label="Add Document"
+        class="p-button-warning" (click)="addDocument()"></button>
     </div>
-  
+
     @for (doc of documents; track $index) {
-  
       <div class="border rounded-xl p-4 space-y-3">
-  
-        <!-- EXISTING FILE INFO -->
         @if (doc.isExisting) {
           <div class="flex justify-between items-center">
             <div>
               <p class="font-medium">{{ doc.fileName }}</p>
               <p class="text-xs text-gray-500">{{ doc.type }}</p>
             </div>
-  
-            <button
-              pButton
-              type="button"
-              icon="pi pi-download"
-              class="p-button-sm p-button-info"
-              (click)="downloadDocument(doc.id!)">
-            </button>
+            <button pButton type="button" icon="pi pi-download"
+              class="p-button-sm p-button-info" (click)="downloadDocument(doc.id!)"></button>
           </div>
         }
-  
-        <!-- NEW FILE -->
         @if (!doc.isExisting) {
           <input type="file" (change)="onFileSelected($event, $index)" />
-  
           @if (doc.file) {
-            <small class="text-green-600">
-              {{ doc.file.name }}
-            </small>
+            <small class="text-green-600">{{ doc.file.name }}</small>
           }
         }
-  
-        <!-- TYPE (editable for both) -->
         <p-dropdown
           [options]="[
-            { label: 'Contract', value: 'Contract' },
+            { label: 'Contract',       value: 'Contract' },
             { label: 'Driving Licence', value: 'DrivingLicence' },
-            { label: 'National ID', value: 'NationalId' }
+            { label: 'National ID',    value: 'NationalId' }
           ]"
           [(ngModel)]="doc.type"
           [ngModelOptions]="{ standalone: true }"
@@ -160,20 +170,10 @@
           appendTo="body"
           styleClass="w-full">
         </p-dropdown>
-  
-        <!-- REMOVE -->
-        <button
-          pButton
-          type="button"
-          icon="pi pi-trash"
-          label="Remove"
-          class="p-button-danger w-full"
-          (click)="removeDocument($index)">
-        </button>
-  
+        <button pButton type="button" icon="pi pi-trash" label="Remove"
+          class="p-button-danger w-full" (click)="removeDocument($index)"></button>
       </div>
     }
-  
   </div>
 
   <!-- SUBMIT -->

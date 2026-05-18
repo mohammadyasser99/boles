@@ -8,15 +8,19 @@ import { SkeletonModule } from 'primeng/skeleton';
 import { DropdownModule } from 'primeng/dropdown';   // ← SelectModule is not statically analysable in your PrimeNG version; DropdownModule is stable
 import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
-import { CarService } from 'src/app/core/services/api.services';
+import { CarService, PaymentService } from 'src/app/core/services/api.services';
 import { ApiResponse, CarMonthlyRowDto, CarSummaryDto } from 'src/app/core/models';
+import { DialogModule } from 'primeng/dialog';
 
 interface DisplayRow extends CarMonthlyRowDto {
-  totalDue:   number;
-  remaining:  number;
-  isPaid:     boolean;
-  isOverpaid: boolean;
-  isPartial:  boolean;
+  rentalRemaining: number;   // scheduled - paid
+  finesRemaining:  number;   // totalFines - finesPaid
+  feesRemaining:   number;   // totalEntranceFees - entranceFeesPaid
+  totalDue:        number;
+  totalRemaining:  number;
+  isPaid:          boolean;
+  isPartial:       boolean;
+  isOverpaid:      boolean;
 }
 
 interface YearOption { label: string; value: number }
@@ -38,14 +42,22 @@ const MONTHS = [
     DropdownModule,    // ← replaces SelectModule; use p-dropdown in the template
     ButtonModule,
     TooltipModule,
+    DialogModule
   ],
   templateUrl: './car-payment-report.component.html',
   styleUrl:    './car-payment-report.component.css',
 })
 export class CarPaymentReportComponent implements OnInit {   // ← implements OnInit added
   private carService = inject(CarService);
+  private paymentService = inject(PaymentService);
   private route = inject(ActivatedRoute);
   carPlate = signal('');
+
+
+  payDialogVisible = signal(false);
+payingRow        = signal<DisplayRow | null>(null);
+payAmount        = signal<number>(0);
+paying           = signal(false);
 
   // ── State ─────────────────────────────────────────────────────────────────
   loading      = signal(false);
@@ -58,83 +70,78 @@ export class CarPaymentReportComponent implements OnInit {   // ← implements O
 
   // ── Computed rows ─────────────────────────────────────────────────────────
 
-  displayRows = computed<DisplayRow[]>(() => {
-    const s = this.summary();
-    if (!s) return [];
-  
-    const join = s.joinDate ? new Date(s.joinDate) : null;
-  
-    const filtered = s.rows.filter(r => r.year === this.selectedYear());
-  
-    return Array.from({ length: 12 }, (_, i) => {
-      const month = i + 1;
-  
-      const raw = filtered.find(r => r.month === month) ?? {
-        year: this.selectedYear(),
-        month,
-        rentalPrice: s.rentalPrice,
-        paymentDate: null,
-        amountPaid: 0,
-        totalFines: 0,
-        finesCount: 0,
-        totalEntranceFees: 0,
-        entranceFeesCount: 0,
-      };
-  
-      // 🚨 FIX HERE: enforce join date rule in frontend
- 
-      let rent = 0;
+displayRows = computed<DisplayRow[]>(() => {
+  const s = this.summary();
+  if (!s) return [];
 
-      if (join) {
-        const rowStart = new Date(raw.year, raw.month - 1, 1);
-        const now = new Date();
-      
-        const isAfterJoin =
-          rowStart >= new Date(join.getFullYear(), join.getMonth(), 1);
-      
-        const isNotFuture =
-          raw.year < now.getFullYear() ||
-          (raw.year === now.getFullYear() && raw.month <= now.getMonth() + 1);
-      
-        if (isAfterJoin && isNotFuture) {
-          rent = raw.rentalPrice;
-        }
-      }
-      const totalDue = rent + raw.totalFines + raw.totalEntranceFees;
-      const remaining = totalDue - raw.amountPaid;
-  
-      return {
+  const join   = s.joinDate       ? new Date(s.joinDate)       : null;
+  const expiry = s.contractExpiry ? new Date(s.contractExpiry) : null;
+  if (!join || !expiry) return [];
+
+  const startYear = join.getFullYear(),   startMonth = join.getMonth() + 1;
+  const endYear   = expiry.getFullYear(), endMonth   = expiry.getMonth() + 1;
+
+  const rows: DisplayRow[] = [];
+  let y = startYear, m = startMonth;
+
+  while (y < endYear || (y === endYear && m <= endMonth)) {
+    if (y === this.selectedYear()) {
+      const raw = s.rows.find(r => r.year === y && r.month === m) ?? {
+        year: y, month: m,
+        paymentDate:      null,
+        rentalPrice:      0,          // ← 0 if no schedule entry (shouldn't happen)
+        rentalPaid:       0,
+        finesPaid:        0,
+        entranceFeesPaid: 0,
+        amountPaid:       0,
+        totalFines:       0, finesCount: 0,
+        totalEntranceFees: 0, entranceFeesCount: 0,
+      } as CarMonthlyRowDto;
+
+      const rentalRemaining = Math.max(0, raw.rentalPrice      - raw.rentalPaid);
+      const finesRemaining  = Math.max(0, raw.totalFines       - raw.finesPaid);
+      const feesRemaining   = Math.max(0, raw.totalEntranceFees - raw.entranceFeesPaid);
+
+      const totalDue       = raw.rentalPrice + raw.totalFines + raw.totalEntranceFees;
+      const totalPaid      = raw.rentalPaid  + raw.finesPaid  + raw.entranceFeesPaid;
+      const totalRemaining = rentalRemaining + finesRemaining + feesRemaining;
+
+      rows.push({
         ...raw,
-        rentalPrice: rent,   // 🔥 override so UI is consistent
+        rentalRemaining,
+        finesRemaining,
+        feesRemaining,
         totalDue,
-        remaining,
-        isPaid: remaining <= 0 && raw.amountPaid > 0,
-        isOverpaid: remaining < 0,
-        isPartial: raw.amountPaid > 0 && remaining > 0,
-      };
-    });
-  });
+        totalRemaining,
+        isPaid:    totalDue > 0 && totalRemaining === 0,
+        isPartial: totalPaid > 0 && totalRemaining > 0,
+        isOverpaid: totalPaid > totalDue,
+      });
+    }
+    m++; if (m > 12) { m = 1; y++; }
+  }
+  return rows;
+});
 
-  totals = computed(() => {
-    const rows = this.displayRows();
-  
-    const amountPaid = rows.reduce((s, r) => s + r.amountPaid, 0);
-    const totalFines = rows.reduce((s, r) => s + r.totalFines, 0);
-    const totalEntranceFees = rows.reduce((s, r) => s + r.totalEntranceFees, 0);
-  
-    const totalRent = rows.reduce((s, r) => s + (r.rentalPrice ?? 0), 0);
-  
-    const totalDue = totalRent + totalFines + totalEntranceFees;
-    const remaining = totalDue - amountPaid;
-  
-    return {
-      amountPaid,
-      totalFines,
-      totalEntranceFees,
-      totalDue,
-      remaining
-    };
-  });
+totals = computed(() => {
+  const rows = this.displayRows();
+  const rentalDue        = rows.reduce((s, r) => s + r.rentalPrice,      0);
+  const rentalPaid       = rows.reduce((s, r) => s + r.rentalPaid,       0);
+  const finesPaid        = rows.reduce((s, r) => s + r.finesPaid,        0);
+  const entranceFeesPaid = rows.reduce((s, r) => s + r.entranceFeesPaid, 0);
+  const totalFines       = rows.reduce((s, r) => s + r.totalFines,       0);
+  const totalFees        = rows.reduce((s, r) => s + r.totalEntranceFees,0);
+  const totalDue         = rentalDue + totalFines + totalFees;
+  const totalPaid        = rentalPaid + finesPaid + entranceFeesPaid;
+
+  return {
+    rentalDue, rentalPaid,
+    finesPaid, totalFines,
+    entranceFeesPaid, totalFees,
+    totalDue, totalPaid,
+    totalRemaining: totalDue - totalPaid,
+  };
+});
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -183,17 +190,51 @@ export class CarPaymentReportComponent implements OnInit {   // ← implements O
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
-  private buildYears(summary: CarSummaryDto): void {
-    const currentYear = new Date().getFullYear();
-    const rowYears = summary.rows.map(r => r.year);
+private buildYears(summary: CarSummaryDto): void {
+  if (!summary.joinDate || !summary.contractExpiry) return;
 
-    // Keep data years, but also provide a practical recent range for navigation.
-    const recentYears = Array.from({ length: 6 }, (_, i) => currentYear - i);
-    const years = [...new Set([...rowYears, ...recentYears])].sort((a, b) => b - a);
+  const startYear = new Date(summary.joinDate).getFullYear();
+  const endYear   = new Date(summary.contractExpiry).getFullYear();
 
-    this.yearOptions.set(years.map(y => ({ label: String(y), value: y })));
-    this.selectedYear.set(rowYears.includes(currentYear) ? currentYear : years[0]);
-  }
+  const years: number[] = [];
+  for (let y = startYear; y <= endYear; y++) years.push(y);
+
+  this.yearOptions.set(years.reverse().map(y => ({ label: String(y), value: y })));
+
+  const currentYear = new Date().getFullYear();
+  const best = years.find(y => y === currentYear) ?? years[0];
+  this.selectedYear.set(best);
+}
+
+openPayDialog(row: DisplayRow): void {
+  this.payingRow.set(row);
+  this.payAmount.set(row.rentalRemaining);   // pre-fill with full remaining
+  this.payDialogVisible.set(true);
+}
+
+
+
+submitRentalPayment(): void {
+  const row     = this.payingRow();
+  const summary = this.summary();
+  if (!row || !summary || this.payAmount() <= 0) return;
+
+  this.paying.set(true);
+  this.paymentService.addRentalPayment(summary.clientId, {
+    month:  row.month,
+    year:   row.year,
+    amount: this.payAmount(),
+  }).subscribe({
+    next: () => {
+      this.payDialogVisible.set(false);
+      this.paying.set(false);
+      this.load();
+    },
+    error: (err: any) => {
+      this.paying.set(false);
+    },
+  });
+}
 
   onYearChange(value: number): void {
     this.selectedYear.set(value);
@@ -201,22 +242,20 @@ export class CarPaymentReportComponent implements OnInit {   // ← implements O
 
   monthName(m: number): string { return MONTHS[m - 1]; }
 
-  isFuture(row: DisplayRow): boolean {
-    const now = new Date();
-    return row.year > now.getFullYear() ||
-      (row.year === now.getFullYear() && row.month > now.getMonth() + 1);
-  }
+isFuture(row: DisplayRow): boolean {
+  const now = new Date();
+  const currentYear  = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+  return row.year > currentYear || (row.year === currentYear && row.month > currentMonth);
+}
 
-  statusLabel(row: DisplayRow): string {
-    const totalDue = row.totalDue;
-  
-    if (totalDue === 0) return 'Clear';   // ✅ fix
-  
-    if (row.amountPaid === 0) return 'Unpaid';
-    if (row.isOverpaid)       return 'Overpaid';
-    if (row.isPaid)           return 'Paid';
-    return 'Partial';
-  }
+statusLabel(row: DisplayRow): string {
+  if (row.totalDue === 0 && row.amountPaid === 0) return 'Clear';
+  if (row.amountPaid === 0)  return 'Unpaid';
+  if (row.isOverpaid)        return 'Overpaid';
+  if (row.isPaid)            return 'Paid';
+  return 'Partial';
+}
 
   statusSeverity(row: DisplayRow): 'success' | 'warning' | 'danger' | 'info' {
     if (row.isPaid)     return 'success';

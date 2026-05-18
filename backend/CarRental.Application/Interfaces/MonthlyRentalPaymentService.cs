@@ -17,7 +17,7 @@ namespace CarRental.Application.Interfaces
         Task<List<MonthlyRentalPaymentDto>> GetAllAsync();
         Task<MonthlyRentalPaymentDto> GetByIdAsync(Guid id);
         Task<SystemFinancialSummaryDto> GetSystemMonthlySummaryAsync();
-
+        Task AddRentalPaymentAsync(Guid clientId, AddRentalPaymentDto dto);
     }
 
 }

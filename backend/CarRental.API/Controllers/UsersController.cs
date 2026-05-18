@@ -92,7 +92,7 @@ public class UsersController : ControllerBase
     [Consumes("multipart/form-data")]
     [ProducesResponseType(typeof(ApiResponse<UserDto>), 201)]
     [ProducesResponseType(typeof(ApiResponse<object>), 400)]
-    public async Task<IActionResult> CreateUserWithCar([FromBody] CreateUserWithCarDto dto)
+    public async Task<IActionResult> CreateUserWithCar([FromForm] CreateUserWithCarDto dto)
     {
         try
         {
@@ -137,40 +137,6 @@ public class UsersController : ControllerBase
             return NotFound(ApiResponse<object>.Fail("User or Car not found"));
 
         return Ok(ApiResponse<UserWithCarDto>.Ok(result));
-    }
-
-    /// <summary>Update an existing user.</summary>
-    [HttpPut("{id:guid}")]
-    [ProducesResponseType(typeof(ApiResponse<object>), 200)]
-    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
-    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateUserDto dto)
-    {
-        try
-        {
-            await _userService.UpdateUserAsync(id, dto);
-            return Ok(ApiResponse<object>.Ok(null, "User updated successfully."));
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(ApiResponse<object>.Fail(ex.Message));
-        }
-    }
-
-    /// <summary>Delete a user.</summary>
-    [HttpDelete("{id:guid}")]
-    [ProducesResponseType(typeof(ApiResponse<object>), 200)]
-    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
-    public async Task<IActionResult> Delete(Guid id)
-    {
-        try
-        {
-            await _userService.DeleteUserAsync(id);
-            return Ok(ApiResponse<object>.Ok(null, "User deleted successfully."));
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(ApiResponse<object>.Fail(ex.Message));
-        }
     }
 
     /// <summary>

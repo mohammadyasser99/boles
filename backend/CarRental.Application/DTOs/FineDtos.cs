@@ -14,7 +14,7 @@ public record CarFinesSummaryDto(
     int NewViolationsAdded
 );
 
-public record CarFineDto(string ViolationNumber, decimal Amount);
+public record CarFineDto(string ViolationNumber, decimal Amount, DateTime? ViolationDate);
 public record TotalFinesForCar(string CarPlate, decimal totalAmount, IEnumerable<CarFineDto> Fines);
 
 public record CarDebtDto(

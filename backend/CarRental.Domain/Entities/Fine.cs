@@ -11,6 +11,7 @@ public class Fine
 
     /// <summary>المبلغ الإجمالي بعد الخصم - total amount after discount</summary>
     public decimal Amount { get; set; }
+    public decimal? PaidAmount { get; set; }
 
     public DateTime? ViolationDate { get; set; }
     public string? Description { get; set; }

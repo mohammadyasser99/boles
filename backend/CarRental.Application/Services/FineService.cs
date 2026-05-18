@@ -119,7 +119,7 @@ public class FineService : IFineService
         var fines = await _fineRepository.GetAll()
        .Where(x => x.CarPlate == carPlate && !x.IsPaid)
        .AsNoTracking()
-       .Select(x => new CarFineDto(x.ViolationNumber, x.Amount))
+       .Select(x => new CarFineDto(x.ViolationNumber, x.Amount,x.ViolationDate))
        .ToListAsync();
 
         if (!fines.Any())

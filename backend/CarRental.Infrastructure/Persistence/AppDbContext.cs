@@ -51,7 +51,6 @@ public class AppDbContext : DbContext
         {
             e.HasKey(c => c.CarPlate);
             e.Property(c => c.CarPlate).HasMaxLength(20);
-            e.Property(c => c.RentalPrice).HasColumnType("decimal(18,2)");
             e.Property(c => c.ChassisNumber).HasMaxLength(17);
             e.HasIndex(u => u.ChassisNumber).IsUnique();
             e.HasOne(c => c.Client)

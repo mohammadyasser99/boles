@@ -176,6 +176,13 @@ export class PaymentService {
   private http = inject(HttpClient);
   private base = `${environment.apiUrl}/payment`;
 
+
+  addRentalPayment(clientId: string, dto: { month: number; year: number; amount: number }) {
+  return this.http.post<ApiResponse<null>>(
+    `${this.base}/clients/${clientId}/payments/rental`, dto
+  );
+}
+
   getAll(): Observable<ApiResponse<MonthlyRentalPaymentDto[]>> {
     return this.http.get<ApiResponse<MonthlyRentalPaymentDto[]>>(this.base);
   }
