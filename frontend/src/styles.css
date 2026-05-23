@@ -117,34 +117,96 @@ body {
 
 
 /* Calendar popup container */
+/* Remove transform: scale(0.8) to fix positioning math */
 .p-datepicker {
-  transform: scale(0.8);
-
   font-size: 0.8rem;
+  padding: 0.5rem; /* Compact padding */
 }
 
-/* Header buttons */
+/* Fix for long month names overlapping */
+.p-datepicker .p-datepicker-header {
+  padding: 0.25rem;
+  gap: 0.5rem; /* Gives space between text and navigation buttons */
+}
+
+.p-datepicker .p-datepicker-title {
+  display: flex;
+  gap: 0.25rem;
+  line-height: 1.2;
+}
+
+/* Header navigation buttons */
 .p-datepicker .p-datepicker-header button {
   width: 1.8rem;
   height: 1.8rem;
 }
 
-/* Day cells */
+/* Day cells grid */
+.p-datepicker table td {
+  padding: 2px; /* Thinner spacing between days */
+}
+
 .p-datepicker table td > span {
   width: 1.8rem;
   height: 1.8rem;
   font-size: 0.75rem;
+  line-height: 1.8rem;
 }
 
-/* Month & year text */
+/* Month & year text buttons */
 .p-datepicker .p-datepicker-title button {
   font-size: 0.85rem;
+  padding: 0 0.25rem;
 }
 
 /* Weekday labels */
 .p-datepicker table th {
+  padding: 0.25rem;
   font-size: 0.7rem;
+}
+
+/* Footer Button Bar (Today/Clear) */
+.p-datepicker .p-datepicker-buttonbar {
+  padding: 0.5rem 0 0 0;
 }
 
 
 
+/* Ensure the title container allows its children to sit naturally side-by-side */
+/* ==========================================================================
+   PRIME NG DATEPICKER HEADER FIXED CRASH OVERRIDES
+   ========================================================================== */
+
+/* 1. Reset the core title wrapper structure */
+.p-datepicker .p-datepicker-header .p-datepicker-title {
+  display: flex !important;
+  flex-direction: row !important;
+  justify-content: center !important;
+  align-items: center !important;
+  gap: 8px !important;            /* Hard physical gap between Month and Year */
+  width: auto !important;
+  min-width: 120px !important;    /* Ensures long names don't compress */
+  margin: 0 auto !important;
+}
+
+/* 2. Strip any negative spacing or positioning from the Month/Year buttons */
+.p-datepicker .p-datepicker-title .p-datepicker-month,
+.p-datepicker .p-datepicker-title .p-datepicker-year {
+  position: relative !important;   /* Breaks it out of rigid JS layout blocks */
+  display: inline-block !important;
+  margin: 0 !important;           /* Force removes hidden negative margins */
+  padding: 0 4px !important;      /* Creates internal element breathing room */
+  font-size: 0.85rem !important;
+  font-weight: 600 !important;
+  width: auto !important;         /* Stop components from shrinking width */
+}
+
+/* 3. Ensure the overall header wrapper stretches naturally */
+.p-datepicker .p-datepicker-header {
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 0.5rem !important;
+  width: 100% !important;
+}

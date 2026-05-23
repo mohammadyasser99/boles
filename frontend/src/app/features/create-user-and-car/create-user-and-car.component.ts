@@ -178,21 +178,23 @@ private loadUserWithCar(userId: string) {
       const data = res?.data;
       if (!data) return;
 
-      this.form.patchValue({
-        name:           data.name           ?? '',
-        phoneNumber:    data.phoneNumber     ?? '',
-        email:          data.email           ?? '',
-        nationalId:     data.nationalId      ?? '',
-        dateOfPayment:  data.dateOfPayment   ? data.dateOfPayment.toString().split('T')[0]   : null,
-        joinDate:       data.joinDate        ? data.joinDate.toString().split('T')[0]         : null,
-        contractExpiry: data.contractExpiry  ? data.contractExpiry.toString().split('T')[0]  : null,
-        carPlate:       data.car?.carPlate      ?? '',
-        brand:          data.car?.brand         ?? '',
-        modelName:      data.car?.model         ?? '',
-        year:           data.car?.year          ?? null,
-        chassisNumber:  data.car?.chassisNumber ?? '',
-        userId:         data.id ?? userId
-      });
+   this.form.patchValue({
+  name: data.name ?? '',
+  phoneNumber: data.phoneNumber ?? '',
+  email: data.email ?? '',
+  nationalId: data.nationalId ?? '',
+
+  dateOfPayment: data.dateOfPayment ? new Date(data.dateOfPayment) : null,
+  joinDate: data.joinDate ? new Date(data.joinDate) : null,
+  contractExpiry: data.contractExpiry ? new Date(data.contractExpiry) : null,
+
+  carPlate: data.car?.carPlate ?? '',
+  brand: data.car?.brand ?? '',
+  modelName: data.car?.model ?? '',
+  year: data.car?.year ?? null,
+  chassisNumber: data.car?.chassisNumber ?? '',
+  userId: data.id ?? userId
+});
 
       // ── Restore payment schedule from JSON string ──────────────────
       if (data.paymentScheduleJson) {
