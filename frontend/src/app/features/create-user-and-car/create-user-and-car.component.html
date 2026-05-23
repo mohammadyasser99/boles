@@ -47,13 +47,20 @@
       <small class="text-red-500 text-xs"
         *ngIf="form.get('joinDate')?.touched && form.get('joinDate')?.invalid">Join date is required</small>
     </div>
-    <div>
-      <label class="block text-sm mb-1 text-gray-600">Contract Expiry</label>
-      <input type="date" formControlName="contractExpiry"
-        class="w-full border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-      <small class="text-red-500 text-xs"
-        *ngIf="form.get('contractExpiry')?.touched && form.get('contractExpiry')?.invalid">Contract expiry is required</small>
-    </div>
+  <div>
+    <label class="block text-sm mb-1 text-gray-600">Contract Expiry</label>
+    <p-calendar 
+      formControlName="contractExpiry"
+      dateFormat="dd/mm/yy"
+      [showIcon]="true"
+      [showButtonBar]="true"
+      appendTo="body"
+      inputStyleClass="w-full border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+      >
+    </p-calendar>
+    <small class="text-red-500 text-xs"
+      *ngIf="form.get('contractExpiry')?.touched && form.get('contractExpiry')?.invalid">Contract expiry is required</small>
+  </div>
   </div>
 
   <!-- ✅ PAYMENT SCHEDULE -->
