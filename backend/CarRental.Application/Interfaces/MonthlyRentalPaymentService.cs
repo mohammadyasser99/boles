@@ -1,4 +1,5 @@
-﻿using CarRental.Application.DTOs;
+﻿using CarRental.Application.Common;
+using CarRental.Application.DTOs;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,7 +10,7 @@ namespace CarRental.Application.Interfaces
 {
     public interface IMonthlyRentalPaymentService
     {
-        Task<CreateMonthlyRentalPaymentResponseDtos> CreateAsync(
+        Task<ApiResponse<CreateMonthlyRentalPaymentResponseDtos>> CreateAsync(
     CreateMonthlyRentalPaymentRequestDtos request);
         Task<CarSummaryDto> GetMonthlySummaryAsync(string carPlate);
 
@@ -20,7 +21,7 @@ namespace CarRental.Application.Interfaces
             string? paymentType = null);
         Task<MonthlyRentalPaymentDto> GetByIdAsync(Guid id);
         Task<SystemFinancialSummaryDto> GetSystemMonthlySummaryAsync();
-        Task AddRentalPaymentAsync(Guid clientId, AddRentalPaymentDto dto);
+        Task<string?> AddRentalPaymentAsync(Guid clientId, AddRentalPaymentDto dto);
     }
 
 }

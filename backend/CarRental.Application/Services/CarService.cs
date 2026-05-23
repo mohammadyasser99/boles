@@ -85,7 +85,7 @@ public class CarService : ICarService
     {
         IQueryable<Car> query = _carRepository.GetAll()
             .Include(c => c.Client)
-                .ThenInclude(cl => cl.Payments)
+              //  .ThenInclude(cl => cl.Payments)
             .Include(c => c.Fines)
             .Include(c => c.EntranceFees);
 
@@ -153,32 +153,24 @@ public class CarService : ICarService
             var client = car.Client;
             if (client?.PaymentScheduleJson is not null)
             {
-                // Deserialize — expects: [{ "year": 2026, "month": 5, "rentalPrice": 1500 }, ...]
                 var schedule = JsonSerializer.Deserialize<List<ScheduleEntry>>(
                     client.PaymentScheduleJson,
                     new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
                 ) ?? [];
 
-                // Build a lookup of how much rental has already been paid, keyed by (year, month)
-                var paidByMonth = client.Payments
-                    .GroupBy(p => (p.PaidAt.Year, p.PaidAt.Month))
-                    .ToDictionary(g => g.Key, g => g.Sum(p => p.Amount));
-
                 foreach (var entry in schedule)
                 {
                     var entryDate = new DateOnly(entry.Year, entry.Month, 1);
 
-                    // Only count months that are due (on or before today)
                     if (entryDate > today) continue;
 
-                    var paid = paidByMonth.GetValueOrDefault((entry.Year, entry.Month), 0);
-                    var remaining = entry.RentalPrice - paid;
+                    // ✅ RentalPaid is now read directly from the schedule JSON
+                    var remaining = entry.RentalPrice - entry.RentalPaid;
 
                     if (remaining > 0)
                         unpaidMonthly += remaining;
                 }
             }
-
             var total = unpaidFines + unpaidEntrance + unpaidMonthly;
 
             result.Add(new CarDto(
@@ -198,5 +190,5 @@ public class CarService : ICarService
     }
 
     // ── Local DTO for deserializing the schedule JSON ─────────────────────────────
-    private sealed record ScheduleEntry(int Year, int Month, decimal RentalPrice);
+    private sealed record ScheduleEntry(int Year, int Month, decimal RentalPrice, decimal RentalPaid = 0);
 }

@@ -21,23 +21,16 @@ namespace CarRental.API.Controllers
         }
         [HttpPost]
         [ProducesResponseType(typeof(ApiResponse<CreateMonthlyRentalPaymentResponseDtos>), 200)]
-        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
-        public async Task<IActionResult> Create(
-           [FromBody] CreateMonthlyRentalPaymentRequestDtos request)
+        [ProducesResponseType(typeof(ApiResponse<CreateMonthlyRentalPaymentResponseDtos>), 400)]
+        public async Task<IActionResult> Create([FromBody] CreateMonthlyRentalPaymentRequestDtos request)
         {
-            try
-            {
-                var result = await _paymentService.CreateAsync(request);
+            var result = await _paymentService.CreateAsync(request);
 
-                return Ok(
-                    ApiResponse<CreateMonthlyRentalPaymentResponseDtos>
-                    .Ok(result, "Payment created successfully."));
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ApiResponse<object>.Fail(ex.Message));
-            }
+            return result.Success
+                ? Ok(result)
+                : BadRequest(result);
         }
+
 
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(Guid id, [FromBody] UpdateMonthlyRentalPaymentRequestDto request)

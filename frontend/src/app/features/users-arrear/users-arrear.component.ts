@@ -10,6 +10,8 @@ import { FormsModule } from '@angular/forms';
 import { CarService } from 'src/app/core/services/api.services';
 import { TooltipModule } from 'primeng/tooltip';
 import { DropdownModule } from 'primeng/dropdown';
+import { PaginatorModule } from 'primeng/paginator';
+
 interface CarDebt {
   carPlate:     string;
   userName:     string | null;
@@ -21,46 +23,53 @@ interface CarDebt {
 }
 
 interface UserGroup {
-  userId:       string | null;
-  userName:     string | null;
-  cars:         CarDebt[];
-  totalRental:  number;
-  totalFines:   number;
-  totalFees:    number;
-  grandTotal:   number;
+  userId:      string | null;
+  userName:    string | null;
+  cars:        CarDebt[];
+  totalRental: number;
+  totalFines:  number;
+  totalFees:   number;
+  grandTotal:  number;
 }
+
 @Component({
   selector: 'app-users-arrear',
   standalone: true,
-  imports: [    CommonModule, FormsModule,
+  imports: [
+    CommonModule, FormsModule,
     TableModule, ButtonModule,
-    SkeletonModule, TagModule, InputTextModule, TooltipModule, DropdownModule],
+    SkeletonModule, TagModule,
+    InputTextModule, TooltipModule,
+    DropdownModule, PaginatorModule,
+  ],
   templateUrl: './users-arrear.component.html',
   styleUrl: './users-arrear.component.css'
 })
-export class UsersArrearComponent  implements OnInit {
+export class UsersArrearComponent implements OnInit {
   private carService = inject(CarService);
   private router     = inject(Router);
 
-  search   = signal('');
-searchBy = signal('username');
+  searchByOptions = [
+    { label: 'Username',    value: 'username'   },
+    { label: 'National ID', value: 'nationalid' },
+    { label: 'Phone',       value: 'phone'      },
+    { label: 'Email',       value: 'email'      },
+  ];
 
-searchByOptions = [
-  { label: 'Username',    value: 'username'   },
-  { label: 'National ID', value: 'nationalid' },
-  { label: 'Phone',       value: 'phone'      },
-  { label: 'Email',       value: 'email'      },
-];
-  loading   = signal(false);
-  errorMsg  = signal('');
-  allCars   = signal<CarDebt[]>([]);
-searchValue = '';
-searchByValue = 'username';
-  readonly skeletonRows = Array(8).fill({});
+  searchValue   = '';
+  searchByValue = 'username';
+
+  loading      = signal(false);
+  errorMsg     = signal('');
+  allCars      = signal<CarDebt[]>([]);
+  currentPage  = signal(1);
+  totalRecords = signal(0);
+  readonly pageSize    = 10;
+  readonly skeletonRows = Array(10).fill({});
 
   userGroups = computed<UserGroup[]>(() => {
     const cars = this.allCars();
-    const map = new Map<string, UserGroup>();
+    const map  = new Map<string, UserGroup>();
 
     for (const car of cars) {
       const key = car.userId ?? car.carPlate;
@@ -79,42 +88,39 @@ searchByValue = 'username';
 
       const g = map.get(key)!;
       g.cars.push(car);
-      g.totalRental  += car.unpaidRental;
-      g.totalFines   += car.unpaidFines;
-      g.totalFees    += car.unpaidFees;
-      g.grandTotal   += car.totalDebs;
+      g.totalRental += car.unpaidRental;
+      g.totalFines  += car.unpaidFines;
+      g.totalFees   += car.unpaidFees;
+      g.grandTotal  += car.totalDebs;
     }
 
-    let groups = Array.from(map.values())
+    return Array.from(map.values())
       .sort((a, b) => b.grandTotal - a.grandTotal);
-
-
-
-    return groups;
   });
 
   ngOnInit() { this.load(); }
-clearSearch() {
-  this.searchValue = '';
-  this.searchByValue = 'username';
-  this.load();
-}
- load(page = 1) {
-  this.loading.set(true);
 
-  this.carService.getAllWithDebs(
-    page,
-    200,
-    this.searchValue,
-    this.searchByValue
-  ).subscribe({
+  load(page = 1) {
+    this.loading.set(true);
+    this.currentPage.set(page);
+
+    this.carService.getAllWithDebs(
+      page,
+      this.pageSize,
+      this.searchValue,
+      this.searchByValue
+    ).subscribe({
       next: (res: any) => {
-        const items = res?.data?.items ?? res?.data ?? [];
+        const paged = res?.data;
+        const items = paged?.items ?? res?.data ?? [];
+
+        this.totalRecords.set(paged?.totalCount ?? items.length);
+
         this.allCars.set(items.map((c: any) => ({
           carPlate:     c.carPlate,
           userName:     c.userName,
           userId:       c.userId,
-          totalDebs:    c.totaldebs   ?? 0,
+          totalDebs:    c.totaldebs    ?? 0,
           unpaidRental: c.unpaidRental ?? 0,
           unpaidFines:  c.unpaidFines  ?? 0,
           unpaidFees:   c.unpaidFees   ?? 0,
@@ -128,6 +134,16 @@ clearSearch() {
     });
   }
 
+  onPageChange(event: any) {
+    this.load(event.page + 1);
+  }
+
+  clearSearch() {
+    this.searchValue   = '';
+    this.searchByValue = 'username';
+    this.load(1);
+  }
+
   goToReport(carPlate: string) {
     this.router.navigate(['/car-payment-report', carPlate]);
   }
@@ -139,8 +155,8 @@ clearSearch() {
   }
 
   debtSeverity(total: number): 'success' | 'warning' | 'danger' {
-    if (total === 0)    return 'success';
-    if (total < 1000)   return 'warning';
+    if (total === 0)  return 'success';
+    if (total < 1000) return 'warning';
     return 'danger';
   }
 }

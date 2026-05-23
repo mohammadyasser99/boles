@@ -1,6 +1,8 @@
-﻿using CarRental.Application.DTOs;
+﻿using CarRental.Application.Common;
+using CarRental.Application.DTOs;
 using CarRental.Application.Interfaces;
 using CarRental.Domain.Entities;
+using CarRental.Domain.Enums;// Top of your service file
 using CarRental.Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Org.BouncyCastle.Asn1.Pkcs;
@@ -11,7 +13,6 @@ using System.Runtime.ConstrainedExecution;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using CarRental.Domain.Enums;// Top of your service file
 namespace CarRental.Application.Services
 {
     public class MonthlyRentalPaymentService : IMonthlyRentalPaymentService
@@ -41,111 +42,126 @@ namespace CarRental.Application.Services
             _unitOfWork = unitOfWork;
         }
 
-        public async Task<CreateMonthlyRentalPaymentResponseDtos> CreateAsync(
-            CreateMonthlyRentalPaymentRequestDtos request)
+        public async Task<ApiResponse<CreateMonthlyRentalPaymentResponseDtos>> CreateAsync(
+           CreateMonthlyRentalPaymentRequestDtos request)
         {
             try
             {
                 var user = await _userRepository.GetByIdAsync(request.UserId)
-?? throw new Exception("User not found.");
+                    ?? throw new Exception("User not found.");
 
                 var car = await _carRepository
                     .GetAll()
                     .FirstOrDefaultAsync(c => c.CarPlate == request.CarPlate)
                     ?? throw new Exception("Car not found.");
-                //if the amount is monthly car rental
+
                 if (request.PaymentType == PaymentType.MonthlyRental)
                 {
+                    var monthlyPayment = new AddRentalPaymentDto(
+                        request.PaidAt.Month,
+                        request.PaidAt.Year,
+                        request.Amount);
 
-                    var monthlypayment = new AddRentalPaymentDto(request.PaidAt.Month , request.PaidAt.Year,request.Amount);
-                    await AddRentalPaymentAsync(request.UserId, monthlypayment);
+                    string? balanceMessage = await AddRentalPaymentAsync(request.UserId, monthlyPayment);
 
-                    return new CreateMonthlyRentalPaymentResponseDtos(new Guid());
-                }else if (request.PaymentType ==PaymentType.Fines)
+                    var message = balanceMessage ?? "Monthly rental payment created successfully.";
+                    return ApiResponse<CreateMonthlyRentalPaymentResponseDtos>
+                        .Ok(new CreateMonthlyRentalPaymentResponseDtos(Guid.NewGuid()), message);
+                }
+                else if (request.PaymentType == PaymentType.Fines)
                 {
-                    var fine =await _fineRepository.GetAll().Where(x => x.ViolationNumber == request.ViolationNumber).FirstOrDefaultAsync();
+                    var fine = await _fineRepository
+                        .GetAll()
+                        .Where(x => x.ViolationNumber == request.ViolationNumber)
+                        .FirstOrDefaultAsync()
+                        ?? throw new Exception("Fine not found.");
 
-  
-                    if (fine !=null)
+                    decimal remaining = fine.Amount - (fine.PaidAmount ?? 0);
+                    string? balanceMessage = null;
+                    decimal amountToApply = request.Amount;
+
+                    if (request.Amount > remaining)
                     {
-                        if ((fine.PaidAmount ?? 0) + request.Amount <= fine.Amount)
-                        {
-                            fine.PaidAmount = (fine.PaidAmount ?? 0) + request.Amount;
-                        }
-                        else
-                        {
-                            throw new Exception($"you must enter a numbber less than {fine.Amount-(fine.PaidAmount ??0)}");
-                        }
-                        if (fine.PaidAmount == fine.Amount)
-                        {
-                            fine.IsPaid = true;
-                        }
+                        decimal excess = request.Amount - remaining;
+                        amountToApply = remaining;
+
+                        user.Balance += excess;
+                        balanceMessage = $"Fine fully paid. Excess amount of {excess:F2} EGP has been added to your balance. New balance: {user.Balance:F2} EGP.";
                     }
-                    var payment = new Payment
+
+                    fine.PaidAmount = (fine.PaidAmount ?? 0) + amountToApply;
+                    fine.IsPaid = fine.PaidAmount >= fine.Amount;
+
+                    var finePayment = new Payment
                     {
                         Id = Guid.NewGuid(),
-                        Amount = request.Amount,
+                        Amount = amountToApply,
                         PaidAt = request.ViolationDate.HasValue
-    ? DateOnly.FromDateTime(request.ViolationDate.Value)
-    : request.PaidAt,
+                            ? DateOnly.FromDateTime(request.ViolationDate.Value)
+                            : request.PaidAt,
                         Car = car,
                         User = user,
                         PaymentType = request.PaymentType,
                         ViolationNumber = request.ViolationNumber,
                     };
 
-                    await _paymentRepository.AddAsync(payment);
+                    await _paymentRepository.AddAsync(finePayment);
                     await _unitOfWork.SaveChangesAsync();
-                    return new CreateMonthlyRentalPaymentResponseDtos(payment.Id);
 
+                    var message = balanceMessage ?? "Fine payment created successfully.";
+                    return ApiResponse<CreateMonthlyRentalPaymentResponseDtos>
+                        .Ok(new CreateMonthlyRentalPaymentResponseDtos(finePayment.Id), message);
                 }
                 else
                 {
-                    var entrancefee = await _entrancefeeRepository.GetAll().Where(x=>x.TripNumber == request.TripNumber).FirstOrDefaultAsync();
-                    if (entrancefee != null)
+                    var entranceFee = await _entrancefeeRepository
+                        .GetAll()
+                        .Where(x => x.TripNumber == request.TripNumber)
+                        .FirstOrDefaultAsync()
+                        ?? throw new Exception("Entrance fee not found.");
+
+                    decimal remaining = entranceFee.Amount - (entranceFee.PaidAmount ?? 0);
+                    string? balanceMessage = null;
+                    decimal amountToApply = request.Amount;
+
+                    if (request.Amount > remaining)
                     {
-                        if ((entrancefee.PaidAmount ?? 0) + request.Amount <= entrancefee.Amount)
-                        {
-                            entrancefee.PaidAmount = (entrancefee.PaidAmount ?? 0) + request.Amount;
-                        }
-                        else
-                        {
-                            throw new Exception($"you must enter a numbber less than {entrancefee.Amount - entrancefee.PaidAmount}");
-                        }
-                        if (entrancefee.PaidAmount == entrancefee.Amount)
-                        {
-                            entrancefee.IsPaid = true;
-                        }
+                        decimal excess = request.Amount - remaining;
+                        amountToApply = remaining;
+
+                        user.Balance += excess;
+                        balanceMessage = $"Entrance fee fully paid. Excess amount of {excess:F2} EGP has been added to your balance. New balance: {user.Balance:F2} EGP.";
                     }
-                    var payment = new Payment
+
+                    entranceFee.PaidAmount = (entranceFee.PaidAmount ?? 0) + amountToApply;
+                    entranceFee.IsPaid = entranceFee.PaidAmount >= entranceFee.Amount;
+
+                    var entrancePayment = new Payment
                     {
                         Id = Guid.NewGuid(),
-                        Amount = request.Amount,
-                        PaidAt = entrancefee.TripDate.HasValue
-    ? DateOnly.FromDateTime(entrancefee.TripDate.Value)
-    : request.PaidAt,
+                        Amount = amountToApply,
+                        PaidAt = entranceFee.TripDate.HasValue
+                            ? DateOnly.FromDateTime(entranceFee.TripDate.Value)
+                            : request.PaidAt,
                         Car = car,
                         User = user,
                         PaymentType = request.PaymentType,
                         TripNumber = request.TripNumber
                     };
 
-                    await _paymentRepository.AddAsync(payment);
-                    _unitOfWork.SaveChangesAsync();
-                    return new CreateMonthlyRentalPaymentResponseDtos(payment.Id);
+                    await _paymentRepository.AddAsync(entrancePayment);
+                    await _unitOfWork.SaveChangesAsync(); // ← was missing await
 
+                    var message = balanceMessage ?? "Entrance fee payment created successfully.";
+                    return ApiResponse<CreateMonthlyRentalPaymentResponseDtos>
+                        .Ok(new CreateMonthlyRentalPaymentResponseDtos(entrancePayment.Id), message);
                 }
-
             }
             catch (Exception ex)
             {
-                throw ex;
+                return ApiResponse<CreateMonthlyRentalPaymentResponseDtos>.Fail(ex.Message);
             }
-
-
         }
-
-
         public async Task<CarSummaryDto> GetMonthlySummaryAsync(string carPlate)
         {
             // ── 1. Car ────────────────────────────────────────────────────────────
@@ -332,7 +348,7 @@ namespace CarRental.Application.Services
         }
 
         // ── Add a (partial or full) rental payment for one month ──────────────────
-        public async Task AddRentalPaymentAsync(Guid clientId, AddRentalPaymentDto dto)
+        public async Task<string?> AddRentalPaymentAsync(Guid clientId, AddRentalPaymentDto dto)
         {
             if (dto.Amount <= 0)
                 throw new Exception("Payment amount must be greater than zero.");
@@ -342,35 +358,41 @@ namespace CarRental.Application.Services
                 .FirstOrDefaultAsync(x => x.Id == clientId)
                 ?? throw new Exception("Client not found.");
 
-            // ── Update schedule JSON ───────────────────────────────────────────
             var schedule = string.IsNullOrEmpty(client.PaymentScheduleJson)
                 ? new List<PaymentScheduleItem>()
-                : JsonSerializer.Deserialize<List<PaymentScheduleItem>>(client.PaymentScheduleJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
-
+                : JsonSerializer.Deserialize<List<PaymentScheduleItem>>(
+                    client.PaymentScheduleJson,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
 
             var entry = schedule.FirstOrDefault(p => p.Month == dto.Month && p.Year == dto.Year)
                 ?? throw new Exception($"No rental schedule entry for {dto.Month}/{dto.Year}.");
 
-            var remaining = entry.Amount - entry.RentalPaid;
+            decimal remaining = entry.Amount - entry.RentalPaid;
+            string? balanceMessage = null;
+            decimal amountToApply = dto.Amount;
 
             if (dto.Amount > remaining)
-                throw new Exception(
-                    $"Over-payment: only {remaining:F2} EGP remaining for {dto.Month}/{dto.Year}.");
+            {
+                decimal excess = dto.Amount - remaining;
+                amountToApply = remaining;
 
-            entry.RentalPaid += dto.Amount;
+                client.Balance += excess;
+                balanceMessage = $"Monthly rental fully paid. Excess amount of {excess:F2} EGP has been added to your balance. New balance: {client.Balance:F2} EGP.";
+            }
+
+            entry.RentalPaid += amountToApply;
             entry.IsPaid = entry.RentalPaid >= entry.Amount;
             entry.PaidAt = DateTime.UtcNow;
 
             client.PaymentScheduleJson = JsonSerializer.Serialize(schedule);
 
-            // ── Also insert a Payment record for audit trail ───────────────────
             var car = client.Cars.FirstOrDefault()
                 ?? throw new Exception("No car linked to this client.");
 
             await _paymentRepository.AddAsync(new Payment
             {
                 Id = Guid.NewGuid(),
-                Amount = dto.Amount,
+                Amount = amountToApply,
                 PaidAt = DateOnly.FromDateTime(DateTime.UtcNow),
                 PaymentType = (Domain.Enums.PaymentType)PaymentType.MonthlyRental,
                 Car = car,
@@ -378,6 +400,8 @@ namespace CarRental.Application.Services
             });
 
             await _unitOfWork.SaveChangesAsync();
+
+            return balanceMessage;
         }
         public async Task UpdateAsync(Guid id, UpdateMonthlyRentalPaymentRequestDto request)
         {

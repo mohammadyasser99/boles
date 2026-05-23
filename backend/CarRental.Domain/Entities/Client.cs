@@ -10,6 +10,7 @@ public class Client
     public DateOnly JoinDate { get; set; }
     public DateOnly ContractExpiry {  get; set; }
     public string? PaymentScheduleJson { get; set; }
+    public decimal Balance { get; set; } = 0;
 
     // Navigation
     public virtual ICollection<Car> Cars { get; set; } = new List<Car>();

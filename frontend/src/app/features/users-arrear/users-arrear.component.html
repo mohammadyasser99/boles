@@ -1,66 +1,58 @@
 <div class="p-6 space-y-5">
 
   <!-- Header -->
-<!-- Header -->
-<div class="flex items-center justify-between flex-wrap gap-3">
+  <div class="flex items-center justify-between flex-wrap gap-3">
 
-  <div>
-    <h1 class="text-2xl font-700 text-surface-800">
-      Outstanding Debts
-    </h1>
+    <div>
+      <h1 class="text-2xl font-700 text-surface-800">Outstanding Debts</h1>
+      <p class="text-sm text-surface-400 mt-1">
+        {{ totalRecords() }} client(s) with open balances
+      </p>
+    </div>
 
-    <p class="text-sm text-surface-400 mt-1">
-      {{ userGroups().length }} client(s) with open balances
-    </p>
+    <!-- Search Section -->
+    <div class="flex gap-2 items-center flex-wrap">
+
+      <p-dropdown
+        [options]="searchByOptions"
+        optionLabel="label"
+        optionValue="value"
+        [(ngModel)]="searchByValue"
+        placeholder="Search By"
+        styleClass="w-48">
+      </p-dropdown>
+
+      <span class="p-input-icon-left">
+        <i class="pi pi-search"></i>
+        <input
+          pInputText
+          type="text"
+          placeholder="Search..."
+          [(ngModel)]="searchValue"
+          (keyup.enter)="load(1)"
+          class="w-64" />
+      </span>
+
+      <button
+        pButton
+        type="button"
+        label="Search"
+        icon="pi pi-search"
+        class="p-button-primary"
+        (click)="load(1)">
+      </button>
+
+      <button
+        pButton
+        type="button"
+        label="Clear"
+        icon="pi pi-times"
+        class="p-button-secondary"
+        (click)="clearSearch()">
+      </button>
+
+    </div>
   </div>
-
-  <!-- Search Section -->
-<!-- Search Section -->
-<div class="flex gap-2 items-center flex-wrap">
-
-  <p-dropdown
-    [options]="searchByOptions"
-    optionLabel="label"
-    optionValue="value"
-    [(ngModel)]="searchByValue"
-    placeholder="Search By"
-    styleClass="w-48">
-  </p-dropdown>
-
-  <span class="p-input-icon-left">
-    <i class="pi pi-search"></i>
-
-    <input
-      pInputText
-      type="text"
-      placeholder="Search..."
-      [(ngModel)]="searchValue"
-      class="w-64" />
-  </span>
-
-  <!-- Search Button -->
-  <button
-    pButton
-    type="button"
-    label="Search"
-    icon="pi pi-search"
-    class="p-button-primary"
-    (click)="load()">
-  </button>
-
-  <!-- Clear Button -->
-  <button
-    pButton
-    type="button"
-    label="Clear"
-    icon="pi pi-times"
-    class="p-button-secondary"
-    (click)="clearSearch()">
-  </button>
-
-</div>
-
-</div>
 
   <!-- Error -->
   @if (errorMsg()) {
@@ -105,9 +97,9 @@
       @if (!loading()) {
         <tbody>
           @for (group of userGroups(); track group.userId) {
-         <!-- ✅ AFTER — use ngClass for any Tailwind class containing / -->
-<tr class="border-b border-surface-100 hover:bg-surface-50/60 transition-colors"
-    [ngClass]="{ 'bg-green-50/30': group.grandTotal === 0 }">
+            <tr
+              class="border-b border-surface-100 hover:bg-surface-50/60 transition-colors"
+              [ngClass]="{ 'bg-green-50/30': group.grandTotal === 0 }">
 
               <!-- Client name + badge -->
               <td class="px-5 py-4">
@@ -141,13 +133,14 @@
 
               <!-- Grand total -->
               <td class="px-5 py-4 text-right">
-                <span class="font-700 text-lg"
-                      [class]="group.grandTotal > 0 ? 'text-red-500' : 'text-green-500'">
+                <span
+                  class="font-700 text-lg"
+                  [class]="group.grandTotal > 0 ? 'text-red-500' : 'text-green-500'">
                   {{ group.grandTotal > 0 ? fmt(group.grandTotal) : '✓' }}
                 </span>
               </td>
 
-              <!-- Car plate button(s) — one per car -->
+              <!-- Car plate buttons -->
               <td class="px-5 py-4">
                 <div class="flex flex-wrap gap-2 justify-center">
                   @for (car of group.cars; track car.carPlate) {
@@ -157,10 +150,10 @@
                       [label]="car.carPlate"
                       icon="pi pi-car"
                       class="p-button-sm p-button-outlined"
-                     [ngClass]="{
-  'p-button-danger':  car.totalDebs > 0,
-  'p-button-success': car.totalDebs === 0
-}"
+                      [ngClass]="{
+                        'p-button-danger':  car.totalDebs > 0,
+                        'p-button-success': car.totalDebs === 0
+                      }"
                       (click)="goToReport(car.carPlate)"
                       [pTooltip]="'View report for ' + car.carPlate">
                     </button>
@@ -185,5 +178,15 @@
 
     </table>
   </div>
+
+  <!-- Paginator -->
+  <p-paginator
+    [rows]="pageSize"
+    [totalRecords]="totalRecords()"
+    [first]="(currentPage() - 1) * pageSize"
+    (onPageChange)="onPageChange($event)"
+    [rowsPerPageOptions]="[10, 25, 50]"
+    styleClass="mt-2">
+  </p-paginator>
 
 </div>
