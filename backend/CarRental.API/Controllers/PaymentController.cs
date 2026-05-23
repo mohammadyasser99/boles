@@ -73,11 +73,14 @@ namespace CarRental.API.Controllers
 
 
 
-        [HttpGet]
-        public async Task<IActionResult> GetAll()
+        [HttpGet("payments")]
+        public async Task<IActionResult> GetAll(
+    int page = 1, int pageSize = 10,
+    string? search = null, string? searchBy = null,
+    string? paymentType = null)
         {
-            var result = await _paymentService.GetAllAsync();
-            return Ok(ApiResponse<List<MonthlyRentalPaymentDto>>.Ok(result));
+            var result = await _paymentService.GetAllAsync(page, pageSize, search, searchBy, paymentType);
+            return Ok(ApiResponse<PagedResult<MonthlyRentalPaymentDto>>.Ok(result));
         }
 
         [HttpGet("system-summary")]

@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
@@ -21,6 +21,7 @@ export class UserService {
   private base = `${environment.apiUrl}/users`;
 
   getAll(): Observable<ApiResponse<User[]>> { return this.http.get<ApiResponse<User[]>>(this.base); }
+  
   getById(id: string): Observable<ApiResponse<User>> { return this.http.get<ApiResponse<User>>(`${this.base}/${id}`); }
   getUserWithCar(userId: string): Observable<ApiResponse<any>> { return this.http.get<ApiResponse<any>>(`${this.base}/GetUserWithCar/${userId}`); }
   create(req: FormData): Observable<ApiResponse<User>> { return this.http.post<ApiResponse<User>>(`${this.base}/createUser`, req); }
@@ -48,10 +49,16 @@ export class CarService {
   private base = `${environment.apiUrl}/cars`;
 
   getAll(): Observable<ApiResponse<Car[]>> { return this.http.get<ApiResponse<Car[]>>(this.base); }
-getAllWithDebs(page: number, pageSize: number) {
-  return this.http.get<ApiResponse<PagedResult<Car>>>(
-    `${this.base}/cars-with-debs?page=${page}&pageSize=${pageSize}`
-  );
+getAllWithDebs(page: number, rows: number, search = '', searchBy = 'carplate'): Observable<any> {
+  let params = new HttpParams()
+    .set('page', page)
+    .set('pageSize', rows);
+
+  if (search.trim()) {
+    params = params.set('search', search.trim()).set('searchBy', searchBy);
+  }
+
+  return this.http.get(`${this.base}/cars-with-debs`, { params });
 }
   getCarPaymentReport(plate: string): Observable<ApiResponse<CarSummaryDto>> { return this.http.get<ApiResponse<CarSummaryDto>>(`${this.base}/car-payment-report/${plate}`); }
   getByPlate(plate: string): Observable<ApiResponse<Car>> { return this.http.get<ApiResponse<Car>>(`${this.base}/${plate}`); }
@@ -183,9 +190,16 @@ export class PaymentService {
   );
 }
 
-  getAll(): Observable<ApiResponse<MonthlyRentalPaymentDto[]>> {
-    return this.http.get<ApiResponse<MonthlyRentalPaymentDto[]>>(this.base);
-  }
+ getAll(page: number, rows: number, search = '', searchBy = 'carplate', paymentType = ''): Observable<any> {
+  let params = new HttpParams()
+    .set('page', page)
+    .set('pageSize', rows);
+
+  if (search.trim())   params = params.set('search', search.trim()).set('searchBy', searchBy);
+  if (paymentType)     params = params.set('paymentType', paymentType);
+
+  return this.http.get(`${this.base}/payments`, { params });
+}
 
   getSystemSummary() {
     return this.http.get<ApiResponse<SystemMonthlyRowDto>>(

@@ -175,5 +175,6 @@ export interface SystemMonthlyRowDto {
 
   totalEntranceFees: number;
   entranceFeesCount: number;
-  usersCount:number
+  usersCount:number,
+  totalUnpaidRentals: number;
 }

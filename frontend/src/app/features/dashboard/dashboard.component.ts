@@ -18,6 +18,7 @@ import { ButtonModule } from 'primeng/button';
 export class DashboardComponent implements OnInit {
 private fineService = inject(FineService);
 private paymentService = inject(PaymentService)
+totalUnpaidRentals = signal(0);
 
   loading = signal(true);
   debts = signal<CarDebt[]>([]);
@@ -37,27 +38,24 @@ private paymentService = inject(PaymentService)
     this.loadData();
   }
 
-  loadData(): void {
-    this.loading.set(true);
-  
-    this.paymentService.getSystemSummary().subscribe(res => {
-      if (res.success && res.data) {
-        const data = res.data;
-  
-        this.systemSummary.set(data);
-  
-        this.totalRevenue.set(data.totalRevenue);
-        this.totalDebt.set(data.totalDebt);
-        this.netBalance.set(data.netBalance);
-  
-        this.totalFines.set(data.totalFines);
-        this.totalEntranceFees.set(data.totalEntranceFees);
-        this.finesCount.set(data.finesCount);
-        this.entranceFeesCount.set(data.entranceFeesCount);
-        this.users.set(data.usersCount)
-      }
-  
-      this.loading.set(false);
-    });
-  }
+loadData(): void {
+  this.loading.set(true);
+
+  this.paymentService.getSystemSummary().subscribe(res => {
+    if (res.success && res.data) {
+      const data = res.data;
+      this.systemSummary.set(data);
+      this.totalRevenue.set(data.totalRevenue);
+      this.totalDebt.set(data.totalDebt);
+      this.netBalance.set(data.netBalance);
+      this.totalFines.set(data.totalFines);
+      this.totalEntranceFees.set(data.totalEntranceFees);
+      this.finesCount.set(data.finesCount);
+      this.entranceFeesCount.set(data.entranceFeesCount);
+      this.users.set(data.usersCount);
+      this.totalUnpaidRentals.set(data.totalUnpaidRentals);   // ← add
+    }
+    this.loading.set(false);
+  });
+}
 }

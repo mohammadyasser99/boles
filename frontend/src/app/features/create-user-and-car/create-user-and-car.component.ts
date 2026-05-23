@@ -197,17 +197,16 @@ private loadUserWithCar(userId: string) {
       // ── Restore payment schedule from JSON string ──────────────────
       if (data.paymentScheduleJson) {
         try {
-          const parsed: { year: number; month: number; rentalPrice: number }[] =
-            JSON.parse(data.paymentScheduleJson);
+const parsed: any[] = JSON.parse(data.paymentScheduleJson);
 
-          this.paymentRows = parsed.map(p => ({
-            month:      p.month,
-            year:       p.year,
-            monthLabel: `${MONTH_NAMES[p.month - 1]} ${p.year}`,
-            amount:     p.rentalPrice,   // ← backend field is rentalPrice
-            isPaid:     false,
-            paidAt:     null
-          }));
+this.paymentRows = parsed.map(p => ({
+  month:      p.Month,
+  year:       p.Year,
+  monthLabel: `${MONTH_NAMES[p.Month - 1]} ${p.Year}`,
+  amount:     p.rentalPrice ?? 0,
+  isPaid:     p.IsPaid ?? false,
+  paidAt:     p.PaidAt ?? null
+}));
         } catch {
           // Malformed JSON — fall back to generating from dates
           this.generatePaymentRows(

@@ -29,6 +29,10 @@ export const routes: Routes = [
         path: 'fines',
         loadComponent: () => import('./features/fines/fines.component').then(m => m.FinesComponent)
       },
+            {
+        path: 'users-arrear',
+        loadComponent: () => import('./features/users-arrear/users-arrear.component').then(m => m.UsersArrearComponent)
+      },
       {
         path: 'entrance-fees',
         loadComponent: () => import('./features/entrance-fees/entrance-fees.component').then(m => m.EntranceFeesComponent)

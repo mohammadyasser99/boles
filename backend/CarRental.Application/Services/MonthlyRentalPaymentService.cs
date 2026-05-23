@@ -11,8 +11,7 @@ using System.Runtime.ConstrainedExecution;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using static System.Net.WebRequestMethods;
-// Top of your service file
+using CarRental.Domain.Enums;// Top of your service file
 namespace CarRental.Application.Services
 {
     public class MonthlyRentalPaymentService : IMonthlyRentalPaymentService
@@ -91,7 +90,7 @@ namespace CarRental.Application.Services
     : request.PaidAt,
                         Car = car,
                         User = user,
-                        PaymentType = (Domain.Enums.PaymentType)request.PaymentType,
+                        PaymentType = request.PaymentType,
                         ViolationNumber = request.ViolationNumber,
                     };
 
@@ -127,7 +126,7 @@ namespace CarRental.Application.Services
     : request.PaidAt,
                         Car = car,
                         User = user,
-                        PaymentType = (Domain.Enums.PaymentType)request.PaymentType,
+                        PaymentType = request.PaymentType,
                         TripNumber = request.TripNumber
                     };
 
@@ -226,8 +225,52 @@ namespace CarRental.Application.Services
                 .ToDictionary(g => g.Key, g => g.Sum(p => p.Amount));
 
             // ── 7. Build rows ─────────────────────────────────────────────────────
+            // ── 7. Build rows ─────────────────────────────────────────────────────
+
+            // Start with join date
             var startDate = new DateOnly(client.JoinDate.Year, client.JoinDate.Month, 1);
-            var endDate = new DateOnly(client.ContractExpiry.Year, client.ContractExpiry.Month, 1);
+
+            // Check earliest fine date
+            var earliestFineDate = fines
+                .Where(f => f.ViolationDate.HasValue)
+                .Select(f => f.ViolationDate!.Value)
+                .OrderBy(d => d)
+                .FirstOrDefault();
+
+            // Check earliest entrance fee date
+            var earliestFeeDate = fees
+                .Where(e => e.TripDate.HasValue)
+                .Select(e => e.TripDate!.Value)
+                .OrderBy(d => d)
+                .FirstOrDefault();
+
+            // Compare and use the earliest month
+            if (earliestFineDate != default)
+            {
+                var fineStart = new DateOnly(
+                    earliestFineDate.Year,
+                    earliestFineDate.Month,
+                    1);
+
+                if (fineStart < startDate)
+                    startDate = fineStart;
+            }
+
+            if (earliestFeeDate != default)
+            {
+                var feeStart = new DateOnly(
+                    earliestFeeDate.Year,
+                    earliestFeeDate.Month,
+                    1);
+
+                if (feeStart < startDate)
+                    startDate = feeStart;
+            }
+
+            var endDate = new DateOnly(
+                client.ContractExpiry.Year,
+                client.ContractExpiry.Month,
+                1);
 
             var rows = new List<CarMonthlyRowDto>();
             var cursor = startDate;
@@ -302,7 +345,8 @@ namespace CarRental.Application.Services
             // ── Update schedule JSON ───────────────────────────────────────────
             var schedule = string.IsNullOrEmpty(client.PaymentScheduleJson)
                 ? new List<PaymentScheduleItem>()
-                : JsonSerializer.Deserialize<List<PaymentScheduleItem>>(client.PaymentScheduleJson)!;
+                : JsonSerializer.Deserialize<List<PaymentScheduleItem>>(client.PaymentScheduleJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
+
 
             var entry = schedule.FirstOrDefault(p => p.Month == dto.Month && p.Year == dto.Year)
                 ?? throw new Exception($"No rental schedule entry for {dto.Month}/{dto.Year}.");
@@ -347,19 +391,48 @@ namespace CarRental.Application.Services
             await _paymentRepository.SaveChanges();
         }
 
-        public async Task<List<MonthlyRentalPaymentDto>> GetAllAsync()
+        // Service
+        public async Task<PagedResult<MonthlyRentalPaymentDto>> GetAllAsync(
+            int page, int pageSize,
+            string? search = null, string? searchBy = null,
+            string? paymentType = null)
         {
-            return await _paymentRepository
-                .GetAll()
+            IQueryable<Payment> query = _paymentRepository.GetAll();
+
+            // ── Payment type filter ───────────────────────────────────────────────
+            if (!string.IsNullOrWhiteSpace(paymentType) && Enum.TryParse<PaymentType>(paymentType, ignoreCase: true, out var parsedType))
+                query = query.Where(p => p.PaymentType == parsedType);
+
+            // ── Search filter ─────────────────────────────────────────────────────
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var term = search.Trim().ToLower();
+                query = searchBy switch
+                {
+                    "username" => query.Where(p => p.User.Name.ToLower().Contains(term)),
+                    "carplate" => query.Where(p => p.Car.CarPlate.ToLower().Contains(term)),
+                    _ => query
+                };
+            }
+
+            var totalCount = await query.CountAsync();
+
+            var items = await query
+                .OrderByDescending(p => p.PaidAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .Select(p => new MonthlyRentalPaymentDto(
                     p.Id,
                     p.Amount,
                     p.PaidAt,
                     p.Car.CarPlate,
                     p.User.Id,
-                    p.User.Name
+                    p.User.Name,
+                    p.PaymentType
                 ))
                 .ToListAsync();
+
+            return new PagedResult<MonthlyRentalPaymentDto>(items, totalCount, page, pageSize);
         }
 
         public async Task<MonthlyRentalPaymentDto> GetByIdAsync(Guid id)
@@ -373,7 +446,8 @@ namespace CarRental.Application.Services
                     x.PaidAt,
                     x.Car.CarPlate,
                     x.User.Id,
-                    x.User.Name
+                    x.User.Name,
+                    x.PaymentType
                 ))
                 .FirstOrDefaultAsync()
                 ?? throw new KeyNotFoundException("Payment not found.");
@@ -383,10 +457,9 @@ namespace CarRental.Application.Services
 
         public async Task<SystemFinancialSummaryDto> GetSystemMonthlySummaryAsync()
         {
-            var userscount = await _userRepository.GetAll().CountAsync();
-            var payments = await _paymentRepository
-                .GetAll()
-                .ToListAsync();
+            var usersCount = await _userRepository.GetAll().CountAsync();
+
+            var payments = await _paymentRepository.GetAll().ToListAsync();
 
             var fines = await _fineRepository
                 .GetAll()
@@ -398,13 +471,23 @@ namespace CarRental.Application.Services
                 .Where(e => e.TripDate.HasValue && !e.IsPaid)
                 .ToListAsync();
 
-            var totalRevenue = payments.Sum(p => p.Amount);
+            // ── Unpaid rentals: sum (Amount - RentalPaid) across all client schedules ──
+            var clients = await _userRepository.GetAll().ToListAsync();
 
+            var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+
+            var totalUnpaidRentals = clients
+                .Where(c => !string.IsNullOrEmpty(c.PaymentScheduleJson))
+                .SelectMany(c =>
+                    JsonSerializer.Deserialize<List<PaymentScheduleItem>>(
+                        c.PaymentScheduleJson!, jsonOptions)
+                    ?? new List<PaymentScheduleItem>())
+                .Sum(s => Math.Max(0m, s.Amount - (s.RentalPaid)));
+
+            var totalRevenue = payments.Sum(p => p.Amount);
             var totalFines = fines.Sum(f => f.Amount);
             var totalFees = fees.Sum(e => e.Amount);
-
             var totalDebt = totalFines + totalFees;
-
             var netBalance = totalRevenue - totalDebt;
 
             return new SystemFinancialSummaryDto(
@@ -415,10 +498,10 @@ namespace CarRental.Application.Services
                 TotalEntranceFees: totalFees,
                 FinesCount: fines.Count,
                 EntranceFeesCount: fees.Count,
-                userscount
+                UsersCount: usersCount,
+                TotalUnpaidRentals: totalUnpaidRentals
             );
         }
-
     }
     
 }

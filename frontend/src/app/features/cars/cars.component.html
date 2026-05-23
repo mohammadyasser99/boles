@@ -25,16 +25,37 @@
   (onPage)="onPageChange($event)"
   [rowsPerPageOptions]="[5,10,20,50]"
 >
-      <ng-template pTemplate="caption">
-        <div class="flex items-center gap-3 px-2 py-1">
-          <div class="relative flex-1 max-w-xs">
-            <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-surface-400 text-sm"></i>
-            <input pInputText placeholder="Search plates..." (input)="onSearch($event, dt)"
-              class="!pl-9 !rounded-xl !border-surface-200 w-full text-sm" #dt />
-          </div>
-          <span class="text-xs text-surface-400 font-mono ml-auto">{{ cars().length }} cars</span>
-        </div>
-      </ng-template>
+<ng-template pTemplate="caption">
+  <div class="flex items-center gap-2 px-2 py-1">
+
+    <p-dropdown
+      [(ngModel)]="searchBy"
+      [options]="searchByOptions"
+      optionLabel="label"
+      optionValue="value"
+      styleClass="!rounded-xl !border-surface-200 !text-sm"
+    />
+
+    <div class="relative flex-1 max-w-xs">
+      <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-surface-400 text-sm"></i>
+      <input
+        pInputText
+        [(ngModel)]="searchTerm"
+        [placeholder]="searchBy === 'carplate' ? 'Search plate...' : 'Search name...'"
+        (keyup.enter)="search()"
+        class="!pl-9 !rounded-xl !border-surface-200 w-full text-sm"
+      />
+    </div>
+
+    <button pButton icon="pi pi-search" label="Search" (click)="search()"
+      class="!rounded-xl !bg-brand-600 !border-brand-600"></button>
+
+    <button pButton icon="pi pi-times" label="Clear" severity="secondary" (click)="clearSearch()"
+      class="!rounded-xl"></button>
+
+    <span class="text-xs text-surface-400 font-mono ml-auto">{{ totalRecords() }} cars</span>
+  </div>
+</ng-template>
       <ng-template pTemplate="header">
         <tr>
           <th>Car Plate</th>

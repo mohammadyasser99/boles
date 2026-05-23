@@ -38,10 +38,10 @@ public class CarsController : ControllerBase
     /// </summary>
     [HttpGet("cars-with-debs")]
     [ProducesResponseType(typeof(ApiResponse<IEnumerable<CarDto>>), 200)]
-    public async Task<IActionResult> GetAllWithDebts(int page = 1, int pageSize = 10)
+    public async Task<IActionResult> GetAllWithDebts(int page = 1, int pageSize = 10,
+    string? search = null, string? searchBy = null)
     {
-        var result = await _carService.GetAllWithDebts(page, pageSize);
-
+        var result = await _carService.GetAllWithDebts(page, pageSize, search, searchBy);
         return Ok(ApiResponse<PagedResult<CarDto>>.Ok(result));
     }
 

@@ -72,39 +72,62 @@ paying           = signal(false);
 
 displayRows = computed<DisplayRow[]>(() => {
   const s = this.summary();
-  if (!s) return [];
+  if (!s || !s.rows?.length) return [];
 
-  const join   = s.joinDate       ? new Date(s.joinDate)       : null;
-  const expiry = s.contractExpiry ? new Date(s.contractExpiry) : null;
-  if (!join || !expiry) return [];
+  // ── Start from earliest row returned by API ───────────────────
+  const sortedRows = [...s.rows].sort((a, b) => {
+    if (a.year !== b.year) return a.year - b.year;
+    return a.month - b.month;
+  });
 
-  const startYear = join.getFullYear(),   startMonth = join.getMonth() + 1;
-  const endYear   = expiry.getFullYear(), endMonth   = expiry.getMonth() + 1;
+  const first = sortedRows[0];
+  const last  = sortedRows[sortedRows.length - 1];
+
+  let y = first.year;
+  let m = first.month;
+
+  const endYear  = last.year;
+  const endMonth = last.month;
 
   const rows: DisplayRow[] = [];
-  let y = startYear, m = startMonth;
 
   while (y < endYear || (y === endYear && m <= endMonth)) {
+
     if (y === this.selectedYear()) {
+
       const raw = s.rows.find(r => r.year === y && r.month === m) ?? {
-        year: y, month: m,
-        paymentDate:      null,
-        rentalPrice:      0,          // ← 0 if no schedule entry (shouldn't happen)
-        rentalPaid:       0,
-        finesPaid:        0,
+        year: y,
+        month: m,
+        paymentDate: null,
+        rentalPrice: 0,
+        rentalPaid: 0,
+        finesPaid: 0,
         entranceFeesPaid: 0,
-        amountPaid:       0,
-        totalFines:       0, finesCount: 0,
-        totalEntranceFees: 0, entranceFeesCount: 0,
+        amountPaid: 0,
+        totalFines: 0,
+        finesCount: 0,
+        totalEntranceFees: 0,
+        entranceFeesCount: 0,
       } as CarMonthlyRowDto;
 
-      const rentalRemaining = Math.max(0, raw.rentalPrice      - raw.rentalPaid);
-      const finesRemaining  = Math.max(0, raw.totalFines       - raw.finesPaid);
+      const rentalRemaining = Math.max(0, raw.rentalPrice - raw.rentalPaid);
+      const finesRemaining  = Math.max(0, raw.totalFines - raw.finesPaid);
       const feesRemaining   = Math.max(0, raw.totalEntranceFees - raw.entranceFeesPaid);
 
-      const totalDue       = raw.rentalPrice + raw.totalFines + raw.totalEntranceFees;
-      const totalPaid      = raw.rentalPaid  + raw.finesPaid  + raw.entranceFeesPaid;
-      const totalRemaining = rentalRemaining + finesRemaining + feesRemaining;
+      const totalDue =
+        raw.rentalPrice +
+        raw.totalFines +
+        raw.totalEntranceFees;
+
+      const totalPaid =
+        raw.rentalPaid +
+        raw.finesPaid +
+        raw.entranceFeesPaid;
+
+      const totalRemaining =
+        rentalRemaining +
+        finesRemaining +
+        feesRemaining;
 
       rows.push({
         ...raw,
@@ -113,36 +136,64 @@ displayRows = computed<DisplayRow[]>(() => {
         feesRemaining,
         totalDue,
         totalRemaining,
-        isPaid:    totalDue > 0 && totalRemaining === 0,
+        isPaid: totalDue > 0 && totalRemaining === 0,
         isPartial: totalPaid > 0 && totalRemaining > 0,
         isOverpaid: totalPaid > totalDue,
       });
     }
-    m++; if (m > 12) { m = 1; y++; }
+
+    m++;
+
+    if (m > 12) {
+      m = 1;
+      y++;
+    }
   }
+
   return rows;
 });
 
 totals = computed(() => {
-  const rows = this.displayRows();
-  const rentalDue        = rows.reduce((s, r) => s + r.rentalPrice,      0);
-  const rentalPaid       = rows.reduce((s, r) => s + r.rentalPaid,       0);
-  const finesPaid        = rows.reduce((s, r) => s + r.finesPaid,        0);
-  const entranceFeesPaid = rows.reduce((s, r) => s + r.entranceFeesPaid, 0);
-  const totalFines       = rows.reduce((s, r) => s + r.totalFines,       0);
-  const totalFees        = rows.reduce((s, r) => s + r.totalEntranceFees,0);
-  const totalDue         = rentalDue + totalFines + totalFees;
-  const totalPaid        = rentalPaid + finesPaid + entranceFeesPaid;
+  const s = this.summary();
+
+  if (!s?.rows?.length) {
+    return {
+      rentalDue: 0, rentalPaid: 0,
+      finesPaid: 0, totalFines: 0,
+      entranceFeesPaid: 0, totalFees: 0,
+      totalDue: 0, totalPaid: 0, totalRemaining: 0,
+    };
+  }
+
+  // ── Only count months up to and including today ──────────────────
+  const now          = new Date();
+  const currentYear  = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+
+  const pastAndCurrentRows = s.rows.filter(r =>
+    r.year < currentYear || (r.year === currentYear && r.month <= currentMonth)
+  );
+
+  const rentalDue        = pastAndCurrentRows.reduce((sum, r) => sum + r.rentalPrice,        0);
+  const rentalPaid       = pastAndCurrentRows.reduce((sum, r) => sum + r.rentalPaid,         0);
+  const totalFines       = pastAndCurrentRows.reduce((sum, r) => sum + r.totalFines,         0);
+  const finesPaid        = pastAndCurrentRows.reduce((sum, r) => sum + r.finesPaid,          0);
+  const totalFees        = pastAndCurrentRows.reduce((sum, r) => sum + r.totalEntranceFees,  0);
+  const entranceFeesPaid = pastAndCurrentRows.reduce((sum, r) => sum + r.entranceFeesPaid,   0);
+
+  const rentalRemaining = pastAndCurrentRows.reduce((sum, r) => sum + Math.max(0, r.rentalPrice       - r.rentalPaid),        0);
+  const finesRemaining  = pastAndCurrentRows.reduce((sum, r) => sum + Math.max(0, r.totalFines        - r.finesPaid),         0);
+  const feesRemaining   = pastAndCurrentRows.reduce((sum, r) => sum + Math.max(0, r.totalEntranceFees - r.entranceFeesPaid),  0);
 
   return {
-    rentalDue, rentalPaid,
-    finesPaid, totalFines,
+    rentalDue,       rentalPaid,
+    finesPaid,       totalFines,
     entranceFeesPaid, totalFees,
-    totalDue, totalPaid,
-    totalRemaining: totalDue - totalPaid,
+    totalDue:       rentalDue + totalFines + totalFees,
+    totalPaid:      rentalPaid + finesPaid + entranceFeesPaid,
+    totalRemaining: rentalRemaining + finesRemaining + feesRemaining,  // ← AED 1,700
   };
 });
-
   // ── Lifecycle ─────────────────────────────────────────────────────────────
 
   ngOnInit(): void {
@@ -281,4 +332,24 @@ statusLabel(row: DisplayRow): string {
       style: 'currency', currency: 'AED', minimumFractionDigits: 0,
     }).format(value);
   }
+
+  isContractExpired(): boolean {
+  const summary = this.summary();
+
+  if (!summary?.contractExpiry) return false;
+
+  return new Date(summary.contractExpiry) < new Date();
+}
+
+contractStatusClass(): string {
+  return this.isContractExpired()
+    ? 'bg-red-100 text-red-700'
+    : 'bg-green-100 text-green-700';
+}
+
+contractDateClass(): string {
+  return this.isContractExpired()
+    ? 'text-red-600'
+    : 'text-surface-800';
+}
 }

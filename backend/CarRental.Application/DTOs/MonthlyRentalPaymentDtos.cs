@@ -1,17 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
+﻿using CarRental.Domain.Enums;
 namespace CarRental.Application.DTOs
 {
-    public enum PaymentType
-    {
-        MonthlyRental = 1,
-        Fines = 2,
-        EntranceFees = 3
-    }
+
     public record CreateMonthlyRentalPaymentRequestDtos(Guid UserId, string CarPlate , decimal Amount , DateOnly PaidAt,
             PaymentType PaymentType , string? ViolationNumber , string? TripNumber,DateTime? ViolationDate);
     public record CreateMonthlyRentalPaymentResponseDtos(Guid Id);
@@ -56,7 +46,8 @@ namespace CarRental.Application.DTOs
     DateOnly PaidAt,
     string CarPlate,
     Guid UserId,
-    string? Name
+    string? Name,
+    PaymentType PaymentType
 );
 
     public record SystemMonthlyRowDto(
@@ -79,7 +70,8 @@ namespace CarRental.Application.DTOs
     decimal TotalEntranceFees,
     int FinesCount,
     int EntranceFeesCount,
-    int UsersCount
+    int UsersCount,
+    decimal TotalUnpaidRentals
 );
 
 

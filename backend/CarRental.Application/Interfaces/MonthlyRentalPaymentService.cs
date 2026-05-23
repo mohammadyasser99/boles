@@ -14,7 +14,10 @@ namespace CarRental.Application.Interfaces
         Task<CarSummaryDto> GetMonthlySummaryAsync(string carPlate);
 
         Task UpdateAsync(Guid id, UpdateMonthlyRentalPaymentRequestDto request);
-        Task<List<MonthlyRentalPaymentDto>> GetAllAsync();
+         Task<PagedResult<MonthlyRentalPaymentDto>> GetAllAsync(
+            int page, int pageSize,
+            string? search = null, string? searchBy = null,
+            string? paymentType = null);
         Task<MonthlyRentalPaymentDto> GetByIdAsync(Guid id);
         Task<SystemFinancialSummaryDto> GetSystemMonthlySummaryAsync();
         Task AddRentalPaymentAsync(Guid clientId, AddRentalPaymentDto dto);

@@ -16,6 +16,8 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { TooltipModule } from 'primeng/tooltip';
 import { Router } from '@angular/router';
+import {  distinctUntilChanged } from 'rxjs';
+
 @Component({
   selector: 'app-cars',
   standalone: true,
@@ -32,6 +34,13 @@ export class CarsComponent implements OnInit {
   private toast = inject(MessageService);
   private confirm = inject(ConfirmationService);
   private router = inject(Router);
+  // inside the class:
+searchTerm = '';
+searchBy = 'carplate';
+searchByOptions = [
+  { label: '🔤 Car Plate', value: 'carplate' },
+  { label: '👤 Client Name', value: 'username' }
+];
 cars = signal<Car[]>([]);
 totalRecords = signal(0);
 page = signal(1);
@@ -61,6 +70,7 @@ carForm!: FormGroup;
     this.initForm();
     this.loadCars();
     this.loadUsers();
+
   }
 
   initForm(): void {
@@ -74,33 +84,42 @@ carForm!: FormGroup;
     });
   }
 
- loadCars(): void {
+loadCars(): void {
   this.loading.set(true);
-
-  this.carService.getAllWithDebs(this.page(), this.rows())
+  this.carService.getAllWithDebs(this.page(), this.rows(), this.searchTerm, this.searchBy)
     .subscribe((res: any) => {
-
       if (res.success && res.data) {
-        this.cars.set(res.data.items);          
+        this.cars.set(res.data.items);
         this.totalRecords.set(res.data.totalCount);
       }
-
       this.loading.set(false);
     });
 }
 
+
+search(): void {
+  this.page.set(1);
+  this.loadCars();
+}
+
+clearSearch(): void {
+  this.searchTerm = '';
+  this.page.set(1);
+  this.loadCars();
+}
+
+
+
+
 onPageChange(event: any): void {
-  const pageIndex = event.first / event.rows; // safest way
-
-  this.page.set(pageIndex + 1); // backend usually 1-based
+  this.page.set(event.first / event.rows + 1);
   this.rows.set(event.rows);
-
   this.loadCars();
 }
 loadUsers(): void {
   this.userService.getAll().subscribe(res => {
     if (res.success && res.data) {
-      const users = res.data.map(u => ({
+      const users = res.data.map((u: any) => ({
         label: `${u.name} (${u.email})`,
         value: u.id
       }));
@@ -242,8 +261,5 @@ createCar(): void {
     this.router.navigate([`/car-payment-report/${car.carPlate}`]);
   }
 
-  onSearch(event: Event, dt: any): void {
-    const val = (event.target as HTMLInputElement).value;
-    dt.filterGlobal(val, 'contains');
-  }
+
 }

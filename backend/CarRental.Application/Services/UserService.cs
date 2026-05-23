@@ -189,12 +189,23 @@ public class UserService : IUserService
             car.Year = dto.Year;
         }
 
-        // ── UPDATE USER ──────────────────────────
-        // ── BUILD PAYMENT SCHEDULE JSON ──────────────────────────────────────────
+        // ── UPDATE PAYMENT SCHEDULE ─────────────────────────
         if (dto.MonthlyAmounts != null && dto.MonthlyAmounts.Count > 0)
         {
-            // Generate every month from JoinDate to ContractExpiry (inclusive)
+            // existing schedule from DB
+            var existingSchedule = new List<PaymentScheduleItem>();
+
+            if (!string.IsNullOrWhiteSpace(user.PaymentScheduleJson))
+            {
+                existingSchedule =
+                    JsonSerializer.Deserialize<List<PaymentScheduleItem>>(
+                        user.PaymentScheduleJson
+                    ) ?? new List<PaymentScheduleItem>();
+            }
+
+            // generate months between join and expiry
             var monthSlots = new List<(int Year, int Month)>();
+
             var cursor = new DateOnly(dto.JoinDate.Year, dto.JoinDate.Month, 1);
             var end = new DateOnly(dto.ContractExpiry.Year, dto.ContractExpiry.Month, 1);
 
@@ -204,23 +215,63 @@ public class UserService : IUserService
                 cursor = cursor.AddMonths(1);
             }
 
-            // Zip months with the provided amounts (extra amounts are ignored, missing ones default to 0)
-            var schedule = monthSlots
-                .Select((slot, i) => new
-                {
-                    year = slot.Year,
-                    month = slot.Month,
-                    rentalPrice = i < dto.MonthlyAmounts.Count ? dto.MonthlyAmounts[i] : 0m
-                })
-                .ToList();
+            var updatedSchedule = new List<PaymentScheduleItem>();
 
-            user.PaymentScheduleJson = JsonSerializer.Serialize(schedule);
+            for (int i = 0; i < monthSlots.Count; i++)
+            {
+                var slot = monthSlots[i];
+
+                // existing month
+                var existing = existingSchedule.FirstOrDefault(x =>
+                    x.Year == slot.Year &&
+                    x.Month == slot.Month);
+
+                if (existing != null)
+                {
+                    var newAmount =
+                        i < dto.MonthlyAmounts.Count
+                            ? dto.MonthlyAmounts[i]
+                            : existing.Amount;
+
+                    // prevent lowering below already paid amount
+                    if (newAmount < existing.RentalPaid)
+                    {
+                        throw new Exception(
+                            $"Cannot set rental price for {slot.Month}/{slot.Year} to {newAmount} because the client already paid {existing.RentalPaid}"
+                        );
+                    }
+
+                    // update only rental price
+                    existing.Amount = newAmount;
+
+                    // auto update paid status
+                    existing.IsPaid = existing.RentalPaid >= existing.Amount;
+
+                    updatedSchedule.Add(existing);
+                }
+                else
+                {
+                    // new month
+                    updatedSchedule.Add(new PaymentScheduleItem
+                    {
+                        Year = slot.Year,
+                        Month = slot.Month,
+                        Amount = i < dto.MonthlyAmounts.Count
+                            ? dto.MonthlyAmounts[i]
+                            : 0,
+
+                        RentalPaid = 0,
+                        IsPaid = false,
+                        PaidAt = null
+                    });
+                }
+            }
+
+            user.PaymentScheduleJson =
+                JsonSerializer.Serialize(updatedSchedule);
         }
-        else
-        {
-            // If no amounts sent, clear the schedule so stale data isn't kept
-            user.PaymentScheduleJson = null;
-        }
+
+        // ── UPDATE USER ──────────────────────────
         user.Name = dto.Name;
         user.PhoneNumber = dto.PhoneNumber;
         user.NationalId = dto.NationalId;
@@ -230,7 +281,9 @@ public class UserService : IUserService
         user.ContractExpiry = dto.ContractExpiry;
 
         // ── DOCUMENT SYNC ────────────────────────
-        var existingDocs = (await _documentService.GetUserDocumentsAsync(dto.UserId)).ToList();
+        var existingDocs =
+            (await _documentService.GetUserDocumentsAsync(dto.UserId))
+            .ToList();
 
         var keptIds = dto.ExistingDocumentIds?.ToHashSet()
                       ?? new HashSet<Guid>();
@@ -257,9 +310,9 @@ public class UserService : IUserService
             }
         }
 
+        // ── SAVE ─────────────────────────────────
         await _unitOfWork.SaveChangesAsync();
     }
-
     public async Task<UserDto> CreateUserWithOptionalDocumentAsync(CreateUserWithOptionalDocumentDto dto)
     {
         var existingNational = await _userRepository.GetAll().Where(x => x.NationalId == dto.NationalId).AnyAsync();

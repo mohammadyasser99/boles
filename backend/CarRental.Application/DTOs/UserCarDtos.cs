@@ -76,7 +76,10 @@ public record CreateCarDto(string CarPlate  ,  string? Brand = null,
     int? Year = null,
     string? ChassisNumber = null);
 
-public record CarDto(string CarPlate,  Guid? UserId, string? UserName ,decimal? Totaldebs);
+public record CarDto(string CarPlate,  Guid? UserId, string? UserName ,decimal? Totaldebs, decimal? UnpaidRental,   
+    decimal? UnpaidFines,     
+    decimal? UnpaidFees
+      );
 
 public record CreateAdminDto(string Name, string Username, string Password, string Role);
 public record AdminDto(Guid Id, string Name, string Username, string Role);

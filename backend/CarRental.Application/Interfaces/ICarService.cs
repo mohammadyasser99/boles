@@ -6,7 +6,8 @@ public interface ICarService
 {
     Task<IEnumerable<CarDto>> GetAllCarsAsync();
     Task<CarDto?> GetCarByPlateAsync(string carPlate);
-    Task<PagedResult<CarDto>> GetAllWithDebts(int page, int pageSize);
+    Task<PagedResult<CarDto>> GetAllWithDebts(int page, int pageSize,
+            string? search = null, string? searchBy = null);
     Task<CarDto> CreateCarAsync(CreateCarDto dto);
     Task AssignCarToUserAsync(AssignCarToUserDto dto);
     Task DeleteCarAsync(string carPlate);

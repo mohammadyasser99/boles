@@ -20,13 +20,13 @@ public class CarService : ICarService
 
     public async Task<IEnumerable<CarDto>> GetAllCarsAsync()
     {
-        return await _carRepository.GetAll().Select(c => new CarDto(c.CarPlate, c.ClientId, c.Client.Name ,null)).ToListAsync();
+        return await _carRepository.GetAll().Select(c => new CarDto(c.CarPlate, c.ClientId, c.Client.Name, null, null,null,null)).ToListAsync();
     }
 
     public async Task<CarDto?> GetCarByPlateAsync(string carPlate)
     {
         var car = await _carRepository.GetAll().Where(x=>x.CarPlate ==carPlate).FirstOrDefaultAsync();
-        return car == null ? null : new CarDto(car.CarPlate, car.ClientId, car.Client?.Name ,null);
+        return car == null ? null : new CarDto(car.CarPlate, car.ClientId, car.Client?.Name ,null, null, null, null);
     }
 
     public async Task<CarDto> CreateCarAsync(CreateCarDto dto)
@@ -38,7 +38,7 @@ public class CarService : ICarService
         var car = new Car { CarPlate = dto.CarPlate ,Brand =dto.Brand ,Model =dto.Model , Year = dto.Year ,ChassisNumber =dto.ChassisNumber};
         await _carRepository.AddAsync(car);
         await _carRepository.SaveChanges();
-        return new CarDto(car.CarPlate, null, null,null);
+        return new CarDto(car.CarPlate, null, null,null, null, null, null);
     }
 
     public async Task AssignCarToUserAsync(AssignCarToUserDto dto)
@@ -80,13 +80,49 @@ public class CarService : ICarService
         await _carRepository.SaveChanges();
     }
 
-    public async Task<PagedResult<CarDto>> GetAllWithDebts(int page, int pageSize)
+    public async Task<PagedResult<CarDto>> GetAllWithDebts(int page, int pageSize,
+        string? search = null, string? searchBy = null)
     {
-        var query = _carRepository.GetAll()
+        IQueryable<Car> query = _carRepository.GetAll()
             .Include(c => c.Client)
-                .ThenInclude(cl => cl.Payments)   // ← need client payments for rental
+                .ThenInclude(cl => cl.Payments)
             .Include(c => c.Fines)
             .Include(c => c.EntranceFees);
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = search.Trim().ToLower();
+            query = searchBy?.ToLower() switch
+            {
+                "username" =>
+                    query.Where(c =>
+                        c.Client != null &&
+                        c.Client.Name != null &&
+                        c.Client.Name.ToLower().Contains(term)),
+
+                "nationalid" =>
+                    query.Where(c =>
+                        c.Client != null &&
+                        c.Client.NationalId != null &&
+                        c.Client.NationalId.ToLower().Contains(term)),
+
+                "phone" =>
+                    query.Where(c =>
+                        c.Client != null &&
+                        c.Client.PhoneNumber != null &&
+                        c.Client.PhoneNumber.ToLower().Contains(term)),
+
+                "email" =>
+                    query.Where(c =>
+                        c.Client != null &&
+                        c.Client.Email != null &&
+                        c.Client.Email.ToLower().Contains(term)),
+
+                _ =>
+                    query.Where(c =>
+                        c.CarPlate.ToLower().Contains(term))
+            };
+        }
 
         var totalCount = await query.CountAsync();
 
@@ -149,7 +185,10 @@ public class CarService : ICarService
                 CarPlate: car.CarPlate,
                 UserName: client?.Name,
                 Totaldebs: total,
-                UserId: car.ClientId
+                UserId: car.ClientId,
+                UnpaidRental: unpaidMonthly,
+                UnpaidFines: unpaidFines,
+                UnpaidFees: unpaidEntrance
             ));
         }
 
