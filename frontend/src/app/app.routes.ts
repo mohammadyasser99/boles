@@ -39,17 +39,17 @@ export const routes: Routes = [
       },
       {
         path: 'admins',
-        canActivate: [superAdminGuard],
+        //canActivate: [superAdminGuard],
         loadComponent: () => import('./features/admins/admins.component').then(m => m.AdminsComponent)
       },
             {
         path: 'create-user-car',
-        canActivate: [superAdminGuard],
+        //canActivate: [superAdminGuard],
         loadComponent: () => import('./features/create-user-and-car/create-user-and-car.component').then(m => m.CreateUserAndCarComponent)
       },
       {
         path: 'create-user-car/:userId',
-        canActivate: [superAdminGuard],
+        //canActivate: [superAdminGuard],
         loadComponent: () => import('./features/create-user-and-car/create-user-and-car.component').then(m => m.CreateUserAndCarComponent)
       },
       {
@@ -58,7 +58,7 @@ export const routes: Routes = [
       },
       {
         path: 'monthly-rental-payments',
-        canActivate: [superAdminGuard],
+        //canActivate: [superAdminGuard],
         loadComponent: () => import('./features/monthly-rental-payment/monthly-rental-payment.component').then(m => m.MonthlyRentalPaymentComponent)
       },
     ]

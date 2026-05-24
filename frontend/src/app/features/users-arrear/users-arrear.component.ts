@@ -11,6 +11,7 @@ import { CarService } from 'src/app/core/services/api.services';
 import { TooltipModule } from 'primeng/tooltip';
 import { DropdownModule } from 'primeng/dropdown';
 import { PaginatorModule } from 'primeng/paginator';
+import { MessageService } from 'primeng/api';
 
 interface CarDebt {
   carPlate:     string;
@@ -48,7 +49,7 @@ interface UserGroup {
 export class UsersArrearComponent implements OnInit {
   private carService = inject(CarService);
   private router     = inject(Router);
-
+private toast = inject(MessageService);
   searchByOptions = [
     { label: 'Username',    value: 'username'   },
     { label: 'National ID', value: 'nationalid' },
@@ -144,9 +145,20 @@ export class UsersArrearComponent implements OnInit {
     this.load(1);
   }
 
-  goToReport(carPlate: string) {
-    this.router.navigate(['/car-payment-report', carPlate]);
+goToReport(carPlate: string) {
+  const car = this.allCars().find(c => c.carPlate === carPlate);
+
+  if (!car?.userId) {
+    this.toast.add({
+      severity: 'warn',
+      summary: 'Not Assigned',
+      detail: 'This car is not assigned to any user'
+    });
+    return;
   }
+
+  this.router.navigate(['/car-payment-report', carPlate]);
+}
 
   fmt(v: number) {
     return new Intl.NumberFormat('en-AE', {
