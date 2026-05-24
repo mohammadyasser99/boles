@@ -155,7 +155,6 @@ displayRows = computed<DisplayRow[]>(() => {
 
 totals = computed(() => {
   const s = this.summary();
-
   if (!s?.rows?.length) {
     return {
       rentalDue: 0, rentalPaid: 0,
@@ -165,33 +164,33 @@ totals = computed(() => {
     };
   }
 
-  // ── Only count months up to and including today ──────────────────
-  const now          = new Date();
-  const currentYear  = now.getFullYear();
-  const currentMonth = now.getMonth() + 1;
+  const now     = new Date();
+  const payDay  = s.paymentDayOfMonth ?? 1;
 
-  const pastAndCurrentRows = s.rows.filter(r =>
-    r.year < currentYear || (r.year === currentYear && r.month <= currentMonth)
-  );
+  // Only count months whose payment due date has already passed
+  const dueRows = s.rows.filter(r => {
+    const dueDate = new Date(r.year, r.month - 1, payDay);
+    return dueDate <= now;
+  });
 
-  const rentalDue        = pastAndCurrentRows.reduce((sum, r) => sum + r.rentalPrice,        0);
-  const rentalPaid       = pastAndCurrentRows.reduce((sum, r) => sum + r.rentalPaid,         0);
-  const totalFines       = pastAndCurrentRows.reduce((sum, r) => sum + r.totalFines,         0);
-  const finesPaid        = pastAndCurrentRows.reduce((sum, r) => sum + r.finesPaid,          0);
-  const totalFees        = pastAndCurrentRows.reduce((sum, r) => sum + r.totalEntranceFees,  0);
-  const entranceFeesPaid = pastAndCurrentRows.reduce((sum, r) => sum + r.entranceFeesPaid,   0);
+  const rentalDue        = dueRows.reduce((sum, r) => sum + r.rentalPrice,        0);
+  const rentalPaid       = dueRows.reduce((sum, r) => sum + r.rentalPaid,         0);
+  const totalFines       = dueRows.reduce((sum, r) => sum + r.totalFines,         0);
+  const finesPaid        = dueRows.reduce((sum, r) => sum + r.finesPaid,          0);
+  const totalFees        = dueRows.reduce((sum, r) => sum + r.totalEntranceFees,  0);
+  const entranceFeesPaid = dueRows.reduce((sum, r) => sum + r.entranceFeesPaid,   0);
 
-  const rentalRemaining = pastAndCurrentRows.reduce((sum, r) => sum + Math.max(0, r.rentalPrice       - r.rentalPaid),        0);
-  const finesRemaining  = pastAndCurrentRows.reduce((sum, r) => sum + Math.max(0, r.totalFines        - r.finesPaid),         0);
-  const feesRemaining   = pastAndCurrentRows.reduce((sum, r) => sum + Math.max(0, r.totalEntranceFees - r.entranceFeesPaid),  0);
+  const rentalRemaining = dueRows.reduce((sum, r) => sum + Math.max(0, r.rentalPrice       - r.rentalPaid),       0);
+  const finesRemaining  = dueRows.reduce((sum, r) => sum + Math.max(0, r.totalFines        - r.finesPaid),        0);
+  const feesRemaining   = dueRows.reduce((sum, r) => sum + Math.max(0, r.totalEntranceFees - r.entranceFeesPaid), 0);
 
   return {
-    rentalDue,       rentalPaid,
-    finesPaid,       totalFines,
+    rentalDue, rentalPaid,
+    finesPaid, totalFines,
     entranceFeesPaid, totalFees,
     totalDue:       rentalDue + totalFines + totalFees,
     totalPaid:      rentalPaid + finesPaid + entranceFeesPaid,
-    totalRemaining: rentalRemaining + finesRemaining + feesRemaining,  // ← AED 1,700
+    totalRemaining: rentalRemaining + finesRemaining + feesRemaining,
   };
 });
   // ── Lifecycle ─────────────────────────────────────────────────────────────
@@ -263,7 +262,17 @@ openPayDialog(row: DisplayRow): void {
   this.payDialogVisible.set(true);
 }
 
+payFromBalance(): void {
 
+  const summary = this.summary();
+
+  if (!summary || (summary.balance ?? 0) <= 0) return;
+
+  // TODO:
+  // call your API here
+
+  console.log('Pay from balance clicked');
+}
 
 submitRentalPayment(): void {
   const row     = this.payingRow();
@@ -294,11 +303,17 @@ submitRentalPayment(): void {
   monthName(m: number): string { return MONTHS[m - 1]; }
 
 isFuture(row: DisplayRow): boolean {
-  const now = new Date();
-  const currentYear  = now.getFullYear();
-  const currentMonth = now.getMonth() + 1;
-  return row.year > currentYear || (row.year === currentYear && row.month > currentMonth);
+  const payDay = this.summary()?.paymentDayOfMonth ?? 1;
+  const dueDate = new Date(row.year, row.month - 1, payDay);
+  return new Date() < dueDate;
 }
+
+paymentDueDate(row: DisplayRow): string {
+  const payDay = this.summary()?.paymentDayOfMonth ?? 1;
+  return new Date(row.year, row.month - 1, payDay)
+    .toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
 
 statusLabel(row: DisplayRow): string {
   if (row.totalDue === 0 && row.amountPaid === 0) return 'Clear';

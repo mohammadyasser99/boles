@@ -67,6 +67,8 @@ export interface CarSummaryDto {
   joinDate:       string;
   contractExpiry: string;
   userName:       string | null;
+  paymentDayOfMonth: number; 
+  balance?: number;
 }
 export interface MonthlyRentalPaymentDto {
   id: string;

@@ -32,7 +32,9 @@ namespace CarRental.Application.DTOs
         List<CarMonthlyRowDto> Rows,
         DateOnly JoinDate,
         DateOnly ContractExpiry,
-        string? UserName
+        string? UserName,
+        int PaymentDayOfMonth,
+        decimal? Balance
     );
 
     public record UpdateMonthlyRentalPaymentRequestDto(

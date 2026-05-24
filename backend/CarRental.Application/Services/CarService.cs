@@ -20,13 +20,13 @@ public class CarService : ICarService
 
     public async Task<IEnumerable<CarDto>> GetAllCarsAsync()
     {
-        return await _carRepository.GetAll().Select(c => new CarDto(c.CarPlate, c.ClientId, c.Client.Name, null, null,null,null)).ToListAsync();
+        return await _carRepository.GetAll().Select(c => new CarDto(c.CarPlate, c.ClientId, c.Client.Name, null, null,null,null,null)).ToListAsync();
     }
 
     public async Task<CarDto?> GetCarByPlateAsync(string carPlate)
     {
         var car = await _carRepository.GetAll().Where(x=>x.CarPlate ==carPlate).FirstOrDefaultAsync();
-        return car == null ? null : new CarDto(car.CarPlate, car.ClientId, car.Client?.Name ,null, null, null, null);
+        return car == null ? null : new CarDto(car.CarPlate, car.ClientId, car.Client?.Name ,null, null, null, null,null);
     }
 
     public async Task<CarDto> CreateCarAsync(CreateCarDto dto)
@@ -38,7 +38,7 @@ public class CarService : ICarService
         var car = new Car { CarPlate = dto.CarPlate ,Brand =dto.Brand ,Model =dto.Model , Year = dto.Year ,ChassisNumber =dto.ChassisNumber};
         await _carRepository.AddAsync(car);
         await _carRepository.SaveChanges();
-        return new CarDto(car.CarPlate, null, null,null, null, null, null);
+        return new CarDto(car.CarPlate, null, null,null, null, null, null,null);
     }
 
     public async Task AssignCarToUserAsync(AssignCarToUserDto dto)
@@ -153,6 +153,11 @@ public class CarService : ICarService
             var client = car.Client;
             if (client?.PaymentScheduleJson is not null)
             {
+                // ── Get the day-of-month the client pays on (e.g. 5) ─────────────────
+                var paymentDay = client.DateOfPayment.HasValue
+                    ? client.DateOfPayment.Value.Day
+                    : 1;
+
                 var schedule = JsonSerializer.Deserialize<List<ScheduleEntry>>(
                     client.PaymentScheduleJson,
                     new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
@@ -160,13 +165,13 @@ public class CarService : ICarService
 
                 foreach (var entry in schedule)
                 {
-                    var entryDate = new DateOnly(entry.Year, entry.Month, 1);
+                    // ── Only count once the payment due date has passed ───────────────
+                    // e.g. payment day = 5 → May is due from May 5 onward, not May 1
+                    var paymentDueDate = new DateOnly(entry.Year, entry.Month, paymentDay);
 
-                    if (entryDate > today) continue;
+                    if (paymentDueDate > today) continue;   // ← was: entryDate > today
 
-                    // ✅ RentalPaid is now read directly from the schedule JSON
                     var remaining = entry.RentalPrice - entry.RentalPaid;
-
                     if (remaining > 0)
                         unpaidMonthly += remaining;
                 }
@@ -180,7 +185,8 @@ public class CarService : ICarService
                 UserId: car.ClientId,
                 UnpaidRental: unpaidMonthly,
                 UnpaidFines: unpaidFines,
-                UnpaidFees: unpaidEntrance
+                UnpaidFees: unpaidEntrance,
+                Balance:client?.Balance
             ));
         }
 

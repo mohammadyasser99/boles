@@ -78,7 +78,8 @@ public record CreateCarDto(string CarPlate  ,  string? Brand = null,
 
 public record CarDto(string CarPlate,  Guid? UserId, string? UserName ,decimal? Totaldebs, decimal? UnpaidRental,   
     decimal? UnpaidFines,     
-    decimal? UnpaidFees
+    decimal? UnpaidFees,
+    decimal? Balance
       );
 
 public record CreateAdminDto(string Name, string Username, string Password, string Role);

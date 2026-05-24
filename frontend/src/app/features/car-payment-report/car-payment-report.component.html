@@ -31,8 +31,7 @@
     </div>
 
     <!-- Details Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mt-6">
-
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 mt-6">
       <!-- User -->
       <div class="bg-surface-50 rounded-xl p-4 border border-surface-100">
         <p class="text-xs text-surface-400 mb-1">Customer</p>
@@ -40,6 +39,30 @@
           {{ summary()?.userName }}
         </p>
       </div>
+
+      <!-- Balance -->
+<div class="bg-surface-50 rounded-xl p-4 border border-surface-100">
+  <p class="text-xs text-surface-400 mb-1">Balance</p>
+
+  <p
+    class="font-700 text-lg"
+    [ngClass]="(summary()?.balance ?? 0) > 0
+      ? 'text-green-600'
+      : 'text-surface-700'">
+
+    {{ fmt(summary()?.balance ?? 0) }}
+  </p>
+
+  <button
+    pButton
+    type="button"
+    label="Pay From Balance"
+    icon="pi pi-wallet"
+    class="p-button-sm p-button-success mt-3 w-full"
+    [disabled]="(summary()?.balance ?? 0) <= 0"
+    (click)="payFromBalance()">
+  </button>
+</div>
 
       <!-- Join Date -->
       <div class="bg-surface-50 rounded-xl p-4 border border-surface-100">
@@ -138,6 +161,7 @@
     <th class="text-right text-purple-500">Fees Total</th>
     <th class="text-right text-purple-400">Fees Paid</th>
     <th class="text-right text-red-500">Remaining</th>
+    <th class="text-left text-orange-400">Payment Due</th>
     <th></th>
   </tr>
 </ng-template>
@@ -209,7 +233,14 @@
       }
     </td>
 
-
+<!-- Payment Due Date -->
+<td class="text-sm py-3 px-4">
+  @if (!isFuture(row)) {
+    <span class="font-500 text-surface-700">{{ paymentDueDate(row) }}</span>
+  } @else {
+    <span class="text-xs text-surface-400">{{ paymentDueDate(row) }}</span>
+  }
+</td>
 
   </tr>
 </ng-template>

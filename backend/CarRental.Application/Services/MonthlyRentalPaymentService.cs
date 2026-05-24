@@ -172,7 +172,9 @@ namespace CarRental.Application.Services
                 ?? throw new KeyNotFoundException($"Car '{carPlate}' not found.");
 
             var client = car.Client;
-
+            var paymentDay = client.DateOfPayment.HasValue
+    ? client.DateOfPayment.Value.Day   // extracts "5" from 2026-05-05
+    : 1;
             // ── 2. Load rental schedule from JSON ─────────────────────────────────
             var schedule = string.IsNullOrEmpty(client.PaymentScheduleJson)
         ? new List<PaymentScheduleItem>()
@@ -343,7 +345,9 @@ namespace CarRental.Application.Services
                 Rows: rows,
                 JoinDate: client.JoinDate,
                 ContractExpiry: client.ContractExpiry,
-                UserName: client.Name
+                UserName: client.Name,
+                paymentDay,
+                Balance:client?.Balance
             );
         }
 
