@@ -132,19 +132,30 @@ namespace CarRental.Infrastructure.Services
             var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             var publicId = doc.StoredFileName;
 
-            // ✅ type=upload must be included, parameters alphabetically ordered
+            // Determine resource type from MIME type
+            var resourceType = GetCloudinaryResourceType(doc.ContentType);
+
             var toSign = $"attachment=true&public_id={publicId}&timestamp={timestamp}&type=upload{cfg.ApiSecret}";
             var signature = ComputeSha1(toSign);
 
-            var url = $"https://api.cloudinary.com/v1_1/{cfg.CloudName}/raw/download" +
+            var url = $"https://api.cloudinary.com/v1_1/{cfg.CloudName}/{resourceType}/download" +
                       $"?api_key={cfg.ApiKey}" +
                       $"&attachment=true" +
                       $"&public_id={Uri.EscapeDataString(publicId)}" +
                       $"&signature={signature}" +
                       $"&timestamp={timestamp}" +
-                      $"&type=upload";          // ✅ added
+                      $"&type=upload";
 
             return url;
+        }
+
+        private static string GetCloudinaryResourceType(string mimeType)
+        {
+            if (string.IsNullOrEmpty(mimeType)) return "raw";
+
+            if (mimeType.StartsWith("image/")) return "image";
+            if (mimeType.StartsWith("video/") || mimeType.StartsWith("audio/")) return "video";
+            return "raw"; // PDFs, docs, etc.
         }
         private static string ComputeSha1(string input)
         {
