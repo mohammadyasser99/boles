@@ -237,18 +237,30 @@ this.paymentRows = parsed.map(p => ({
 }
 
   // ─────────────────────────────────────────────────────────────────────
-  downloadDocument(documentId: string) {
-    this.userService.downloadDocument(documentId).subscribe({
-      next: (blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = 'document'; a.click();
-        window.URL.revokeObjectURL(url);
-      },
-      error: () => this.toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to download document' })
-    });
-  }
+downloadDocument(documentId: string) {
+  this.userService.getDocumentUrl(documentId).subscribe({
+    next: (url: string) => {
+      window.open(url, '_blank');
+    },
+    error: () => this.toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'Failed to download document'
+    })
+  });
+}
 
+
+private toDateOnly(value: any): string | null {
+  if (!value) return null;
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return null;
+  // Produces "2026-05-18" which DateOnly on the backend accepts
+  const yyyy = d.getFullYear();
+  const mm   = String(d.getMonth() + 1).padStart(2, '0');
+  const dd   = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
   // ─────────────────────────────────────────────────────────────────────
   submit() {
     if (this.form.invalid) { this.form.markAllAsTouched(); return; }
@@ -268,9 +280,14 @@ this.paymentRows = parsed.map(p => ({
     // ❌ rentalPrice removed
 
     if (v.userId)         formData.append('userId',         v.userId);
-    if (v.dateOfPayment)  formData.append('dateOfPayment',  v.dateOfPayment);
-    if (v.joinDate)       formData.append('joinDate',       v.joinDate);
-    if (v.contractExpiry) formData.append('contractExpiry', v.contractExpiry);
+      // ✅ Format dates before sending
+  const joinDate      = this.toDateOnly(v.joinDate);
+  const contractExpiry = this.toDateOnly(v.contractExpiry);
+  const dateOfPayment  = this.toDateOnly(v.dateOfPayment);
+
+  if (dateOfPayment)   formData.append('dateOfPayment',  dateOfPayment);
+  if (joinDate)        formData.append('joinDate',        joinDate);
+  if (contractExpiry)  formData.append('contractExpiry',  contractExpiry);
 
     // ✅ NEW — send one amount per payment row, in order
     for (const row of this.paymentRows) {

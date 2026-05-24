@@ -189,20 +189,14 @@ public class UsersController : ControllerBase
 
     /// <summary>Download a specific document by document ID.</summary>
     [HttpGet("documents/{documentId:guid}/download")]
-    [ProducesResponseType(200)]
-    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
     public async Task<IActionResult> DownloadDocument(Guid documentId)
     {
         try
         {
-            var result = await _documentService.DownloadDocumentAsync(documentId);
-            return File(result.Bytes, result.ContentType, result.FileName);
+            var url = await _documentService.GetDocumentUrlAsync(documentId);
+             return Content(url, "text/plain");  // ← plain text, no redirect
         }
         catch (KeyNotFoundException ex)
-        {
-            return NotFound(ApiResponse<object>.Fail(ex.Message));
-        }
-        catch (FileNotFoundException ex)
         {
             return NotFound(ApiResponse<object>.Fail(ex.Message));
         }

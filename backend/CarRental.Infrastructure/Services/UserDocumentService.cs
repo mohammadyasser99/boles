@@ -1,10 +1,12 @@
-﻿using CarRental.Application.DTOs;
+﻿using CarRental.Application.cloudnary;
+using CarRental.Application.DTOs;
 using CarRental.Application.Interfaces;
 using CarRental.Domain.Entities;
 using CarRental.Domain.Enums;
 using CarRental.Domain.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,6 +20,7 @@ namespace CarRental.Infrastructure.Services
         private readonly IUserDocumentRepository _documentRepository;
         private readonly IUserRepository _userRepository;
         private readonly IFileStorageService _fileStorage;
+        private readonly IOptions<CloudinarySettings> _cloudinaryOptions;
 
         // Allowed MIME types per document type
         private static readonly Dictionary<DocumentType, string[]> AllowedTypes = new()
@@ -32,11 +35,13 @@ namespace CarRental.Infrastructure.Services
         public UserDocumentService(
             IUserDocumentRepository documentRepository,
             IUserRepository userRepository,
-            IFileStorageService fileStorage)
+            IFileStorageService fileStorage,
+            IOptions<CloudinarySettings> cloudinaryOptions)
         {
             _documentRepository = documentRepository;
             _userRepository = userRepository;
             _fileStorage = fileStorage;
+            _cloudinaryOptions = cloudinaryOptions;
         }
 
         public async Task<UserDocumentDto> UploadDocumentAsync(Guid userId, IFormFile file, DocumentType documentType)
@@ -110,12 +115,43 @@ namespace CarRental.Infrastructure.Services
             var doc = await _documentRepository.GetByIdAsync(documentId)
                 ?? throw new KeyNotFoundException($"Document '{documentId}' not found.");
 
-            await _fileStorage.DeleteFileAsync(doc.FilePath);
+            await _fileStorage.DeleteFileAsync(doc.StoredFileName); // ✅ was FilePath
             await _documentRepository.DeleteAsync(doc.Id);
         }
 
         private static UserDocumentDto ToDto(ClientDocument d) => new(
             d.Id, d.ClientId, d.DocumentType.ToString(),
             d.FileName, d.ContentType, d.FileSizeBytes, d.UploadedAt);
+
+        public async Task<string> GetDocumentUrlAsync(Guid documentId)
+        {
+            var doc = await _documentRepository.GetByIdAsync(documentId)
+                ?? throw new KeyNotFoundException($"Document '{documentId}' not found.");
+
+            var cfg = _cloudinaryOptions.Value;
+            var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            var publicId = doc.StoredFileName;
+
+            // ✅ type=upload must be included, parameters alphabetically ordered
+            var toSign = $"attachment=true&public_id={publicId}&timestamp={timestamp}&type=upload{cfg.ApiSecret}";
+            var signature = ComputeSha1(toSign);
+
+            var url = $"https://api.cloudinary.com/v1_1/{cfg.CloudName}/raw/download" +
+                      $"?api_key={cfg.ApiKey}" +
+                      $"&attachment=true" +
+                      $"&public_id={Uri.EscapeDataString(publicId)}" +
+                      $"&signature={signature}" +
+                      $"&timestamp={timestamp}" +
+                      $"&type=upload";          // ✅ added
+
+            return url;
+        }
+        private static string ComputeSha1(string input)
+        {
+            var bytes = System.Security.Cryptography.SHA1.HashData(
+                System.Text.Encoding.UTF8.GetBytes(input));
+            return Convert.ToHexString(bytes).ToLower();
+        }
+
     }
 }

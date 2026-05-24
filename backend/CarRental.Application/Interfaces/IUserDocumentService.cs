@@ -15,5 +15,6 @@ namespace CarRental.Application.Interfaces
         Task<IEnumerable<UserDocumentDto>> GetUserDocumentsAsync(Guid userId);
         Task<FileDownloadDto> DownloadDocumentAsync(Guid documentId);
         Task DeleteDocumentAsync(Guid documentId);
+        Task<string> GetDocumentUrlAsync(Guid documentId);
     }
 }

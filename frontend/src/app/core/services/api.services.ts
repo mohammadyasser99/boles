@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { map, Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   ApiResponse, User, CreateUserRequest,
@@ -21,7 +21,13 @@ export class UserService {
   private base = `${environment.apiUrl}/users`;
 
   getAll(): Observable<ApiResponse<User[]>> { return this.http.get<ApiResponse<User[]>>(this.base); }
-  
+getDocumentUrl(documentId: string): Observable<string> {
+  return this.http.get(`${this.base}/documents/${documentId}/download`, {
+    responseType: 'text'
+  }).pipe(
+    map(url => url.replace(/^"|"$/g, ''))  // strip surrounding quotes if any
+  );
+}
   getById(id: string): Observable<ApiResponse<User>> { return this.http.get<ApiResponse<User>>(`${this.base}/${id}`); }
   getUserWithCar(userId: string): Observable<ApiResponse<any>> { return this.http.get<ApiResponse<any>>(`${this.base}/GetUserWithCar/${userId}`); }
   create(req: FormData): Observable<ApiResponse<User>> { return this.http.post<ApiResponse<User>>(`${this.base}/createUser`, req); }

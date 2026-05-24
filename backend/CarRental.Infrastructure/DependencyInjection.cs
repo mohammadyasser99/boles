@@ -1,3 +1,4 @@
+using CarRental.Application.cloudnary;
 using CarRental.Application.Interfaces;
 using CarRental.Application.Services;
 using CarRental.Domain.Interfaces;
@@ -26,13 +27,21 @@ public static class DependencyInjection
             options.UseLazyLoadingProxies();
         });
 
+        // ── Cloudinary ───────────────────────────────────────────────────────
+        services.Configure<CloudinarySettings>(opts =>
+        {
+            opts.CloudName = configuration["Cloudinary:CloudName"] ?? "";
+            opts.ApiKey = configuration["Cloudinary:ApiKey"] ?? "";
+            opts.ApiSecret = configuration["Cloudinary:ApiSecret"] ?? "";
+        });
+
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         // ── Repositories ─────────────────────────────────────────────────────
         services.AddScoped<IAdminRepository, AdminRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<ICarRepository, CarRepository>();
         services.AddScoped<IFineRepository, FineRepository>();
-services.AddScoped<IMailManager, MailService > ();
+        services.AddScoped<IMailManager, MailService>();
         // ── Infrastructure Services ──────────────────────────────────────────
         services.AddScoped<IJwtService, JwtService>();
         services.AddScoped<IExcelParserService, ExcelParserService>();
@@ -51,14 +60,13 @@ services.AddScoped<IMailManager, MailService > ();
         services.AddScoped<IDebtCalculatorService, DebtCalculatorService>();
 
         services.AddScoped<IUserDocumentRepository, UserDocumentRepository>();
-        services.AddScoped<IFileStorageService, FileStorageService>();
+        services.AddScoped<IFileStorageService, CloudinaryStorageService>(); // ← swapped
         services.AddScoped<IUserDocumentService, UserDocumentService>();
 
         services.AddScoped<IWhatsAppSenderService, TwilioWhatsAppSenderService>();
         services.AddScoped<IWhatsAppService, WhatsAppService>();
-        services.AddScoped<IMonthlyRentalPaymentService , MonthlyRentalPaymentService>();
+        services.AddScoped<IMonthlyRentalPaymentService, MonthlyRentalPaymentService>();
         services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
-
 
         return services;
     }
