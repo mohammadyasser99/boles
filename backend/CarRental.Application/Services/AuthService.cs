@@ -20,7 +20,10 @@ public class AuthService : IAuthService
     {
         var admin = await _adminRepository.GetAll().Where(x => x.Username == x.Username).FirstAsync()
             ?? throw new UnauthorizedAccessException("Invalid username or password.");
-
+        if (admin.Locked)
+        {
+            throw new UnauthorizedAccessException("User is locked");
+        }
         if (!BCrypt.Net.BCrypt.Verify(request.Password, admin.PasswordHash))
             throw new UnauthorizedAccessException("Invalid username or password.");
 

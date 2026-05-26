@@ -49,7 +49,9 @@ public record CreateUserWithCarDto(
     List<DocumentType>? DocumentTypes,
     List<IFormFile>? DocumentFiles,
     List<Guid>? ExistingDocumentIds,
-    List<decimal>? MonthlyAmounts
+    List<decimal>? MonthlyAmounts,
+    decimal? DownPayment
+
 
 );
 public record UpdateUserWithDocumentDto(

@@ -1,4 +1,7 @@
-﻿dotnet ef migrations add addingBalance --project CarRental.Infrastructure --startup-project CarRental.API
+﻿dotnet ef migrations add addingDownPayment --project CarRental.Infrastructure --startup-project CarRental.API
 
 
 dotnet ef database update --project CarRental.Infrastructure --startup-project CarRental.API
+
+
+Server=db53721.public.databaseasp.net; Database=db53721; User Id=db53721; Password=6Bf-s9#T+oA2; Encrypt=True; TrustServerCertificate=True; MultipleActiveResultSets=True;

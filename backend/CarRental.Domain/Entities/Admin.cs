@@ -8,6 +8,7 @@ public class Admin
     public string Name { get; set; } = string.Empty;
     public string Username { get; set; } = string.Empty;
     public string PasswordHash { get; set; } = string.Empty;
+    public bool Locked { get; set; } = false;
     public AdminRole Role { get; set; }
     public string? RefreshToken { get; set; }
     public DateTime? RefreshTokenExpiry { get; set; }

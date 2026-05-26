@@ -93,7 +93,8 @@ public class UserService : IUserService
             DateOfPayment = dto.DateOfPayment,
             JoinDate = dto.JoinDate,        // ✅ FIX: was missing
             ContractExpiry = dto.ContractExpiry,
-            PaymentScheduleJson = JsonSerializer.Serialize(schedule)
+            PaymentScheduleJson = JsonSerializer.Serialize(schedule),
+            DownPayment=(decimal)dto.DownPayment
         };
         await _userRepository.AddAsync(user);
 
@@ -279,7 +280,7 @@ public class UserService : IUserService
         user.DateOfPayment = dto.DateOfPayment;
         user.JoinDate = dto.JoinDate;
         user.ContractExpiry = dto.ContractExpiry;
-
+        user.DownPayment = (decimal)dto.DownPayment;
         // ── DOCUMENT SYNC ────────────────────────
         var existingDocs =
             (await _documentService.GetUserDocumentsAsync(dto.UserId))
