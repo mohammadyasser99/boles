@@ -78,7 +78,7 @@
           <th>Type</th>
           <th class="text-right">Amount (AED)</th>
           <th>Paid At</th>
-          <th class="text-right">Actions</th>
+          <!-- <th class="text-right">Actions</th> -->
         </tr>
       </ng-template>
 
@@ -115,12 +115,12 @@
             {{ p.paidAt | date:'dd MMM yyyy' }}
           </td>
 
-          <td>
+          <!-- <td>
             <div class="flex justify-end gap-1">
               <button pButton icon="pi pi-pencil" pTooltip="Edit" tooltipPosition="top"
                 (click)="openEdit(p)"></button>
             </div>
-          </td>
+          </td> -->
         </tr>
       </ng-template>
 
@@ -251,24 +251,7 @@
       </div>
     }
 
-    <!-- Trip (only for Entrance Fees Payment) -->
-    @if (form.get('paymentType')?.value === 3) {
-      <div class="space-y-1.5">
-        <label class="text-xs font-display font-600 text-surface-500 uppercase">Trip Number *</label>
-        <p-dropdown
-          [options]="feeOptions()"
-          formControlName="tripNumber"
-          optionLabel="label"
-          optionValue="value"
-          placeholder="Select trip"
-          appendTo="body"
-          class="w-full">
-        </p-dropdown>
-        <small class="text-surface-400 text-xs" *ngIf="feeOptions().length === 0">
-          No entrance fees found for this car.
-        </small>
-      </div>
-    }
+
 
   </form>
 

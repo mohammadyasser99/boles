@@ -1,6 +1,7 @@
 using CarRental.Application.DTOs;
 using CarRental.Application.Interfaces;
 using CarRental.Domain.Entities;
+using CarRental.Domain.Enums;
 using CarRental.Domain.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -14,18 +15,21 @@ public class FineService : IFineService
     private readonly IExcelParserService _excelParser;
     private readonly IDebtCalculatorService _debtCalculator;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IPaymentRepository _paymentrepository;
     public FineService(
         IFineRepository fineRepository,
         ICarRepository carRepository,
         IExcelParserService excelParser,
         IDebtCalculatorService debtCalculator,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IPaymentRepository paymentRepository)
     {
         _fineRepository = fineRepository;
         _carRepository = carRepository;
         _excelParser = excelParser;
         _debtCalculator = debtCalculator;
         _unitOfWork = unitOfWork;
+        _paymentrepository= paymentRepository;
 
     }
 
@@ -134,7 +138,7 @@ public class FineService : IFineService
 
     public async Task MarkAsPaidAsync(string ViolationNumber)
     {
-        var fine = await _fineRepository.GetAll().Where(x=>x.ViolationNumber==ViolationNumber).FirstOrDefaultAsync();
+        var fine = await _fineRepository.GetAll().Where(x=>x.ViolationNumber==ViolationNumber).Include(x=>x.Car).FirstOrDefaultAsync();
 
         if (fine == null)
             throw new Exception("Fine not found.");
@@ -145,8 +149,26 @@ public class FineService : IFineService
         fine.IsPaid = true;
 
         await _fineRepository.UpdateAsync(fine);
+
+        await _paymentrepository.AddAsync(new Payment
+        {
+            Id = Guid.NewGuid(),
+            Amount = fine.Amount,
+            PaidAt = fine.ViolationDate.HasValue
+        ? DateOnly.FromDateTime(fine.ViolationDate.Value)
+        : DateOnly.FromDateTime(DateTime.UtcNow),
+
+            Car = fine.Car,
+            User = fine.Car.Client,
+            PaymentType = PaymentType.Fines,
+            ViolationNumber = fine.ViolationNumber
+        });
         await _unitOfWork.SaveChangesAsync();
+
     }
+
+
+
 
     public async Task<PagedResult<FineDetailsDto>> SearchAsync(
         string? violationNumber,

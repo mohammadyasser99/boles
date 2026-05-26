@@ -56,7 +56,7 @@ public static class DependencyInjection
         services.AddScoped<IEntranceFeeRepository, EntranceFeeRepository>();
         services.AddScoped<IExcelEntranceFeeParserService, ExcelEntranceFeeParserService>();
         services.AddScoped<IEntranceFeeService, EntranceFeeService>();
-
+        services.AddScoped<IPaymentRepository, PaymentRepository>();
         services.AddScoped<IDebtCalculatorService, DebtCalculatorService>();
 
         services.AddScoped<IUserDocumentRepository, UserDocumentRepository>();

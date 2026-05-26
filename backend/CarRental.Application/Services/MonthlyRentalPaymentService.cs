@@ -114,47 +114,103 @@ namespace CarRental.Application.Services
                 }
                 else
                 {
-                    var entranceFee = await _entrancefeeRepository
+                    // Get all unpaid entrance fees
+                    var unpaidEntranceFees = await _entrancefeeRepository
                         .GetAll()
-                        .Where(x => x.TripNumber == request.TripNumber)
-                        .FirstOrDefaultAsync()
-                        ?? throw new Exception("Entrance fee not found.");
+                        .Where(x => x.Car.Client.Id == user.Id && !x.IsPaid)
+                        .OrderBy(x => x.TripDate)
+                        .ToListAsync();
 
-                    decimal remaining = entranceFee.Amount - (entranceFee.PaidAmount ?? 0);
-                    string? balanceMessage = null;
-                    decimal amountToApply = request.Amount;
+                    if (!unpaidEntranceFees.Any())
+                        throw new Exception("No unpaid entrance fees found.");
 
-                    if (request.Amount > remaining)
+                    decimal remainingRequestAmount = request.Amount;
+
+                    foreach (var entranceFee in unpaidEntranceFees)
                     {
-                        decimal excess = request.Amount - remaining;
-                        amountToApply = remaining;
+                        decimal remainingFee =
+                            entranceFee.Amount - (entranceFee.PaidAmount ?? 0);
 
-                        user.Balance += excess;
-                        balanceMessage = $"Entrance fee fully paid. Excess amount of {excess:F2} EGP has been added to your balance. New balance: {user.Balance:F2} EGP.";
+                        if (remainingFee <= 0)
+                            continue;
+
+                        // Stop if no money at all
+                        if (remainingRequestAmount <= 0 && user.Balance <= 0)
+                            break;
+
+                        decimal amountFromRequest = 0;
+                        decimal amountFromBalance = 0;
+
+                        // First use request amount
+                        if (remainingRequestAmount > 0)
+                        {
+                            amountFromRequest = Math.Min(
+                                remainingRequestAmount,
+                                remainingFee
+                            );
+
+                            remainingRequestAmount -= amountFromRequest;
+                            remainingFee -= amountFromRequest;
+                        }
+
+                        // Then use balance
+                        if (remainingFee > 0 && user.Balance > 0)
+                        {
+                            amountFromBalance = Math.Min(
+                                user.Balance,
+                                remainingFee
+                            );
+
+                            user.Balance -= amountFromBalance;
+                            remainingFee -= amountFromBalance;
+                        }
+
+                        decimal totalPaid =
+                            amountFromRequest + amountFromBalance;
+
+                        // Skip if nothing paid
+                        if (totalPaid <= 0)
+                            continue;
+
+                        // Update fee
+                        entranceFee.PaidAmount =
+                            (entranceFee.PaidAmount ?? 0) + totalPaid;
+
+                        entranceFee.IsPaid =
+                            entranceFee.PaidAmount >= entranceFee.Amount;
+
+                        // Payment record
+                        var payment = new Payment
+                        {
+                            Id = Guid.NewGuid(),
+                            Amount = totalPaid,
+                            PaidAt = entranceFee.TripDate.HasValue
+                                ? DateOnly.FromDateTime(entranceFee.TripDate.Value)
+                                : request.PaidAt,
+                            Car = car,
+                            User = user,
+                            PaymentType = PaymentType.EntranceFees,
+                            TripNumber = entranceFee.TripNumber
+                        };
+
+                        await _paymentRepository.AddAsync(payment);
                     }
 
-                    entranceFee.PaidAmount = (entranceFee.PaidAmount ?? 0) + amountToApply;
-                    entranceFee.IsPaid = entranceFee.PaidAmount >= entranceFee.Amount;
-
-                    var entrancePayment = new Payment
+                    // Remaining request amount becomes balance
+                    if (remainingRequestAmount > 0)
                     {
-                        Id = Guid.NewGuid(),
-                        Amount = amountToApply,
-                        PaidAt = entranceFee.TripDate.HasValue
-                            ? DateOnly.FromDateTime(entranceFee.TripDate.Value)
-                            : request.PaidAt,
-                        Car = car,
-                        User = user,
-                        PaymentType = request.PaymentType,
-                        TripNumber = request.TripNumber
-                    };
+                        user.Balance += remainingRequestAmount;
+                    }
 
-                    await _paymentRepository.AddAsync(entrancePayment);
-                    await _unitOfWork.SaveChangesAsync(); // ← was missing await
+                    await _unitOfWork.SaveChangesAsync();
 
-                    var message = balanceMessage ?? "Entrance fee payment created successfully.";
+                    var message = "Entrance fee payment created successfully.";
+
                     return ApiResponse<CreateMonthlyRentalPaymentResponseDtos>
-                        .Ok(new CreateMonthlyRentalPaymentResponseDtos(entrancePayment.Id), message);
+                        .Ok(
+                            new CreateMonthlyRentalPaymentResponseDtos(Guid.NewGuid()),
+                            message
+                        );
                 }
             }
             catch (Exception ex)

@@ -86,24 +86,72 @@ export class CreateUserAndCarComponent implements OnDestroy {
   }
 
   // ─────────────────────────────────────────────────────────────────────
-  initForm() {
-    this.form = this.fb.group({
-      name:           ['', Validators.required],
-      phoneNumber:    ['', Validators.required],
-      email:          ['', [Validators.required, Validators.email]],
-      nationalId:     ['', Validators.required],
-      dateOfPayment:  [null],
-      joinDate:       [null, Validators.required],
-      contractExpiry: [null, Validators.required],
-      carPlate:       ['', Validators.required],
-      brand:          [''],
-      modelName:      [''],
-      year:           [null],
-      // ❌ rentalPrice removed
-      chassisNumber:  [''],
-      userId:         [null]
-    });
+initForm() {
+  this.form = this.fb.group({
+    name: ['', Validators.required],
+
+    phoneNumber: ['', Validators.required],
+
+    email: ['', [Validators.required, Validators.email]],
+
+    nationalId: ['', Validators.required],
+
+    // ✅ REQUIRED
+    dateOfPayment: [null, Validators.required],
+
+    joinDate: [null, Validators.required],
+
+    contractExpiry: [null, Validators.required],
+
+    // ✅ ONLY NUMBERS
+    carPlate: [
+      '',
+      [
+        Validators.required,
+        Validators.pattern(/^[0-9]+$/)
+      ]
+    ],
+
+    brand: [''],
+
+    modelName: [''],
+
+    year: [null],
+
+    // ✅ GLOBAL CHASSIS VALIDATION
+    chassisNumber: [
+      '',
+      [
+        Validators.required,
+        Validators.minLength(17),
+        Validators.maxLength(17),
+        Validators.pattern(/^[A-HJ-NPR-Z0-9]+$/i)
+      ]
+    ],
+
+    userId: [null]
+  },
+  {
+    // ✅ JOIN DATE MUST BE BEFORE EXPIRY
+    validators: this.dateRangeValidator
+  });
+}
+
+dateRangeValidator(group: FormGroup) {
+  const joinDate = group.get('joinDate')?.value;
+  const expiryDate = group.get('contractExpiry')?.value;
+
+  if (!joinDate || !expiryDate) {
+    return null;
   }
+
+  const join = new Date(joinDate);
+  const expiry = new Date(expiryDate);
+
+  return join > expiry
+    ? { invalidDateRange: true }
+    : null;
+}
 
   // ── Watch both dates and regenerate schedule ─────────────────────────
   private watchDatesForSchedule() {
@@ -126,7 +174,11 @@ export class CreateUserAndCarComponent implements OnDestroy {
     const join   = new Date(joinRaw);
     const expiry = new Date(expiryRaw);
 
-    if (isNaN(join.getTime()) || isNaN(expiry.getTime()) || join > expiry) {
+   if (
+  isNaN(join.getTime()) ||
+  isNaN(expiry.getTime()) ||
+  join > expiry
+) {
       this.paymentRows = [];
       return;
     }

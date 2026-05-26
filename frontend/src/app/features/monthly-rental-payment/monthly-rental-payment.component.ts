@@ -119,7 +119,6 @@ export class MonthlyRentalPaymentComponent implements OnInit {
       paymentType:     [null, Validators.required],
       violationNumber: [''],
       violationDate:   [''],
-      tripNumber:      [''],
     });
   }
 
@@ -226,7 +225,6 @@ export class MonthlyRentalPaymentComponent implements OnInit {
       paymentType:     null,
       violationNumber: '',
       violationDate:   '',
-      tripNumber:      '',
     });
 
     this.fineOptions.set([]);
@@ -269,13 +267,7 @@ export class MonthlyRentalPaymentComponent implements OnInit {
       }
     });
 
-    // Auto-fill amount when a trip is selected
-    this.form.get('tripNumber')?.valueChanges.subscribe(v => {
-      const fee = this.feeOptions().find(f => f.value === v);
-      if (fee) {
-        this.form.patchValue({ amount: fee.amount });
-      }
-    });
+
   }
 
   openEdit(payment: MonthlyRentalPaymentDto): void {
@@ -321,7 +313,6 @@ export class MonthlyRentalPaymentComponent implements OnInit {
           paymentType:     formValue.paymentType,
           violationNumber: formValue.paymentType === 2 ? formValue.violationNumber : null,
           violationDate:   formValue.paymentType === 2 ? formValue.violationDate   : null,
-          tripNumber:      formValue.paymentType === 3 ? formValue.tripNumber       : null,
         });
 
     request$.subscribe({

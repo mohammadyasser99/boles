@@ -9,9 +9,9 @@ using System.Threading.Tasks;
 
 namespace CarRental.Infrastructure.Repositories
 {
-    public class MonthlyRentalPaymentRepository : GenericRepository<Payment>, IMonthlyRentalPaymentRepository
+    public class PaymentRepository : GenericRepository<Payment>, IPaymentRepository
     {
-        public MonthlyRentalPaymentRepository(AppDbContext context) : base(context)
+        public PaymentRepository(AppDbContext context) : base(context)
         {
         }
     }

@@ -1,6 +1,8 @@
 <p-toast></p-toast>
 
-<form [formGroup]="form" class="max-w-4xl mx-auto p-6 bg-white shadow-xl rounded-2xl space-y-6">
+<form
+  [formGroup]="form"
+  class="max-w-4xl mx-auto p-6 bg-white shadow-xl rounded-2xl space-y-6">
 
   <h2 class="text-2xl font-bold text-gray-800">
     {{ isEditMode ? 'Edit' : 'Create' }} User & Car
@@ -8,90 +10,193 @@
 
   <!-- USER -->
   <div class="grid md:grid-cols-2 gap-4">
+
+    <!-- NAME -->
     <div>
-      <input pInputText formControlName="name" placeholder="Name" class="w-full" />
-      <small class="text-red-500 text-xs"
-        *ngIf="form.get('name')?.touched && form.get('name')?.invalid">Name is required</small>
-    </div>
-    <div>
-      <input pInputText formControlName="phoneNumber" placeholder="Phone Number" class="w-full" />
-      <small class="text-red-500 text-xs"
-        *ngIf="form.get('phoneNumber')?.touched && form.get('phoneNumber')?.invalid">Phone is required</small>
-    </div>
-    <div>
-      <input pInputText formControlName="email" placeholder="Email" class="w-full" />
-      <small class="text-red-500 text-xs"
-        *ngIf="form.get('email')?.touched && form.get('email')?.invalid">
-        <span *ngIf="form.get('email')?.errors?.['required']">Email is required</span>
-        <span *ngIf="form.get('email')?.errors?.['email']">Invalid email</span>
+      <label class="block text-sm mb-1 text-gray-600">
+        Name <span class="text-red-500">*</span>
+      </label>
+
+      <input
+        pInputText
+        formControlName="name"
+        placeholder="Enter name"
+        class="w-full" />
+
+      <small
+        class="text-red-500 text-xs"
+        *ngIf="form.get('name')?.touched && form.get('name')?.invalid">
+        Name is required
       </small>
     </div>
+
+    <!-- PHONE -->
     <div>
-      <input pInputText formControlName="nationalId" placeholder="National ID" class="w-full" />
-      <small class="text-red-500 text-xs"
-        *ngIf="form.get('nationalId')?.touched && form.get('nationalId')?.invalid">National ID is required</small>
+      <label class="block text-sm mb-1 text-gray-600">
+        Phone Number <span class="text-red-500">*</span>
+      </label>
+
+      <input
+        pInputText
+        formControlName="phoneNumber"
+        placeholder="Enter phone number"
+        class="w-full" />
+
+      <small
+        class="text-red-500 text-xs"
+        *ngIf="form.get('phoneNumber')?.touched &&
+               form.get('phoneNumber')?.invalid">
+        Phone is required
+      </small>
     </div>
+
+    <!-- EMAIL -->
+    <div>
+      <label class="block text-sm mb-1 text-gray-600">
+        Email <span class="text-red-500">*</span>
+      </label>
+
+      <input
+        pInputText
+        formControlName="email"
+        placeholder="Enter email"
+        class="w-full" />
+
+      <small
+        class="text-red-500 text-xs"
+        *ngIf="form.get('email')?.touched &&
+               form.get('email')?.invalid">
+
+        <span *ngIf="form.get('email')?.errors?.['required']">
+          Email is required
+        </span>
+
+        <span *ngIf="form.get('email')?.errors?.['email']">
+          Invalid email
+        </span>
+      </small>
+    </div>
+
+    <!-- NATIONAL ID -->
+    <div>
+      <label class="block text-sm mb-1 text-gray-600">
+        National ID <span class="text-red-500">*</span>
+      </label>
+
+      <input
+        pInputText
+        formControlName="nationalId"
+        placeholder="Enter national ID"
+        class="w-full" />
+
+      <small
+        class="text-red-500 text-xs"
+        *ngIf="form.get('nationalId')?.touched &&
+               form.get('nationalId')?.invalid">
+        National ID is required
+      </small>
+    </div>
+
   </div>
 
   <!-- DATES -->
-<div class="grid md:grid-cols-3 gap-4">
+  <div class="grid md:grid-cols-3 gap-4">
 
-  <!-- Date of Payment -->
-  <div>
-    <label class="block text-sm mb-1 text-gray-600">Date of Payment</label>
-    <p-calendar
-      formControlName="dateOfPayment"
-      dateFormat="dd/mm/yy"
-      [showIcon]="true"
-      [iconDisplay]="'input'"
-      appendTo="body"
-      inputStyleClass="w-full border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-    </p-calendar>
+    <!-- DATE OF PAYMENT -->
+    <div>
+      <label class="block text-sm mb-1 text-gray-600">
+        Date of Payment <span class="text-red-500">*</span>
+      </label>
+
+      <p-calendar
+        formControlName="dateOfPayment"
+        dateFormat="dd/mm/yy"
+        [showIcon]="true"
+        [iconDisplay]="'input'"
+        appendTo="body"
+        inputStyleClass="w-full border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </p-calendar>
+
+      <small
+        class="text-red-500 text-xs"
+        *ngIf="form.get('dateOfPayment')?.touched &&
+               form.get('dateOfPayment')?.invalid">
+        Date of payment is required
+      </small>
+    </div>
+
+    <!-- JOIN DATE -->
+    <div>
+      <label class="block text-sm mb-1 text-gray-600">
+        Join Date <span class="text-red-500">*</span>
+      </label>
+
+      <p-calendar
+        formControlName="joinDate"
+        dateFormat="dd/mm/yy"
+        [showIcon]="true"
+        [iconDisplay]="'input'"
+        appendTo="body"
+        inputStyleClass="w-full border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </p-calendar>
+
+      <small
+        class="text-red-500 text-xs"
+        *ngIf="form.get('joinDate')?.touched &&
+               form.get('joinDate')?.invalid">
+        Join date is required
+      </small>
+    </div>
+
+    <!-- CONTRACT EXPIRY -->
+    <div>
+      <label class="block text-sm mb-1 text-gray-600">
+        Contract Expiry <span class="text-red-500">*</span>
+      </label>
+
+      <p-calendar
+        formControlName="contractExpiry"
+        dateFormat="dd/mm/yy"
+        [showIcon]="true"
+        [iconDisplay]="'input'"
+        appendTo="body"
+        inputStyleClass="w-full border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </p-calendar>
+
+      <small
+        class="text-red-500 text-xs"
+        *ngIf="form.get('contractExpiry')?.touched &&
+               form.get('contractExpiry')?.invalid">
+        Contract expiry is required
+      </small>
+    </div>
+
   </div>
 
-  <!-- Join Date -->
-  <div>
-    <label class="block text-sm mb-1 text-gray-600">Join Date</label>
-    <p-calendar
-      formControlName="joinDate"
-      dateFormat="dd/mm/yy"
-      [showIcon]="true"
-      [iconDisplay]="'input'"
-      appendTo="body"
-      inputStyleClass="w-full border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-    </p-calendar>
+  <!-- DATE RANGE ERROR -->
+  <div
+    *ngIf="form.errors?.['invalidDateRange']"
+    class="text-red-500 text-sm">
 
-    <small class="text-red-500 text-xs"
-      *ngIf="form.get('joinDate')?.touched && form.get('joinDate')?.invalid">
-      Join date is required
-    </small>
+    Join date cannot be after contract expiry date
   </div>
 
-  <!-- Contract Expiry (already correct style) -->
-  <div>
-    <label class="block text-sm mb-1 text-gray-600">Contract Expiry</label>
-    <p-calendar
-      formControlName="contractExpiry"
-      dateFormat="dd/mm/yy"
-      [showIcon]="true"
-      [iconDisplay]="'input'"
-      appendTo="body"
-      inputStyleClass="w-full border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-    </p-calendar>
-  </div>
-
-</div>
-
-  <!-- ✅ PAYMENT SCHEDULE -->
+  <!-- PAYMENT SCHEDULE -->
   @if (paymentRows.length > 0) {
+
     <div class="border-t pt-4 space-y-3">
+
       <h3 class="text-lg font-semibold text-gray-700">
         Payment Schedule
-        <span class="text-sm font-normal text-gray-400 ml-2">({{ paymentRows.length }} months)</span>
+        <span class="text-sm font-normal text-gray-400 ml-2">
+          ({{ paymentRows.length }} months)
+        </span>
       </h3>
 
       <div class="overflow-x-auto rounded-xl border border-gray-200">
+
         <table class="w-full text-sm">
+
           <thead class="bg-gray-50 text-gray-600 uppercase text-xs">
             <tr>
               <th class="px-4 py-3 text-left">Month</th>
@@ -99,18 +204,30 @@
               <th class="px-4 py-3 text-center">Status</th>
             </tr>
           </thead>
+
           <tbody>
+
             @for (row of paymentRows; track $index) {
-              <tr class="border-t border-gray-100"
-                  [class.bg-green-50]="row.isPaid"
-                  [class.bg-white]="!row.isPaid">
-                <td class="px-4 py-2 font-medium text-gray-700">{{ row.monthLabel }}</td>
+
+              <tr
+                class="border-t border-gray-100"
+                [class.bg-green-50]="row.isPaid"
+                [class.bg-white]="!row.isPaid">
+
+                <td class="px-4 py-2 font-medium text-gray-700">
+                  {{ row.monthLabel }}
+                </td>
+
                 <td class="px-4 py-2">
+
                   @if (row.isPaid) {
-                    <!-- Paid — show read-only amount -->
-                    <span class="text-gray-500">{{ row.amount | number:'1.2-2' }}</span>
+
+                    <span class="text-gray-500">
+                      {{ row.amount | number:'1.2-2' }}
+                    </span>
+
                   } @else {
-                    <!-- Unpaid — editable -->
+
                     <input
                       type="number"
                       [(ngModel)]="row.amount"
@@ -119,76 +236,226 @@
                       placeholder="0.00"
                       class="w-32 border border-gray-300 rounded-lg px-2 py-1
                              focus:outline-none focus:ring-2 focus:ring-blue-400" />
+
                   }
+
                 </td>
+
                 <td class="px-4 py-2 text-center">
+
                   @if (row.isPaid) {
+
                     <span class="inline-flex items-center gap-1 text-green-600 font-medium">
                       <i class="pi pi-check-circle"></i> Paid
                     </span>
-                    <p class="text-xs text-gray-400">{{ row.paidAt | date:'mediumDate' }}</p>
+
+                    <p class="text-xs text-gray-400">
+                      {{ row.paidAt | date:'mediumDate' }}
+                    </p>
+
                   } @else {
+
                     <span class="inline-flex items-center gap-1 text-orange-500 font-medium">
                       <i class="pi pi-clock"></i> Pending
                     </span>
+
                   }
+
                 </td>
+
               </tr>
+
             }
+
           </tbody>
+
         </table>
+
       </div>
+
     </div>
+
   }
 
   <!-- CAR -->
   <div class="border-t pt-4 space-y-4">
-    <h3 class="text-lg font-semibold text-gray-700">Car Info</h3>
+
+    <h3 class="text-lg font-semibold text-gray-700">
+      Car Info
+    </h3>
+
     <div class="grid md:grid-cols-2 gap-4">
+
+      <!-- CAR PLATE -->
       <div>
-        <input pInputText formControlName="carPlate" placeholder="Car Plate" class="w-full" />
-        <small class="text-red-500 text-xs"
-          *ngIf="form.get('carPlate')?.touched && form.get('carPlate')?.invalid">Car plate is required</small>
+        <label class="block text-sm mb-1 text-gray-600">
+          Car Plate <span class="text-red-500">*</span>
+        </label>
+
+        <input
+          pInputText
+          formControlName="carPlate"
+          placeholder="Enter car plate"
+          class="w-full" />
+
+        <small
+          class="text-red-500 text-xs"
+          *ngIf="form.get('carPlate')?.touched &&
+                 form.get('carPlate')?.invalid">
+
+          <span *ngIf="form.get('carPlate')?.errors?.['required']">
+            Car plate is required
+          </span>
+
+          <span *ngIf="form.get('carPlate')?.errors?.['pattern']">
+            Car plate must contain numbers only
+          </span>
+
+        </small>
       </div>
-      <input pInputText formControlName="brand"        placeholder="Brand"          class="w-full" />
-      <input pInputText formControlName="modelName"    placeholder="Model"          class="w-full" />
-      <input type="number" formControlName="year"      placeholder="Year"           class="p-inputtext w-full" />
-      <!-- ❌ rentalPrice input removed -->
-      <input pInputText formControlName="chassisNumber" placeholder="Chassis Number" class="w-full" />
+
+      <!-- BRAND -->
+      <div>
+        <label class="block text-sm mb-1 text-gray-600">
+          Brand
+        </label>
+
+        <input
+          pInputText
+          formControlName="brand"
+          placeholder="Enter brand"
+          class="w-full" />
+      </div>
+
+      <!-- MODEL -->
+      <div>
+        <label class="block text-sm mb-1 text-gray-600">
+          Model
+        </label>
+
+        <input
+          pInputText
+          formControlName="modelName"
+          placeholder="Enter model"
+          class="w-full" />
+      </div>
+
+      <!-- YEAR -->
+      <div>
+        <label class="block text-sm mb-1 text-gray-600">
+          Year
+        </label>
+
+        <input
+          type="number"
+          formControlName="year"
+          placeholder="Enter year"
+          class="p-inputtext w-full" />
+      </div>
+
+      <!-- CHASSIS -->
+      <div class="md:col-span-2">
+
+        <label class="block text-sm mb-1 text-gray-600">
+          Chassis Number <span class="text-red-500">*</span>
+        </label>
+
+        <input
+          pInputText
+          formControlName="chassisNumber"
+          placeholder="Enter chassis number"
+          class="w-full uppercase" />
+
+        <small
+          class="text-red-500 text-xs"
+          *ngIf="form.get('chassisNumber')?.touched &&
+                 form.get('chassisNumber')?.invalid">
+
+          <span *ngIf="form.get('chassisNumber')?.errors?.['required']">
+            Chassis number is required
+          </span>
+
+          <span *ngIf="form.get('chassisNumber')?.errors?.['minlength'] ||
+                       form.get('chassisNumber')?.errors?.['maxlength']">
+            Chassis number must be 17 characters
+          </span>
+
+          <span *ngIf="form.get('chassisNumber')?.errors?.['pattern']">
+            Invalid chassis number format
+          </span>
+
+        </small>
+
+      </div>
+
     </div>
+
   </div>
 
   <!-- DOCUMENTS -->
   <div class="border-t pt-4 space-y-4">
+
     <div class="flex items-center justify-between">
-      <h3 class="text-lg font-semibold text-gray-700">Documents</h3>
-      <button pButton type="button" icon="pi pi-plus" label="Add Document"
-        class="p-button-warning" (click)="addDocument()"></button>
+
+      <h3 class="text-lg font-semibold text-gray-700">
+        Documents
+      </h3>
+
+      <button
+        pButton
+        type="button"
+        icon="pi pi-plus"
+        label="Add Document"
+        class="p-button-warning"
+        (click)="addDocument()">
+      </button>
+
     </div>
 
     @for (doc of documents; track $index) {
+
       <div class="border rounded-xl p-4 space-y-3">
+
         @if (doc.isExisting) {
+
           <div class="flex justify-between items-center">
+
             <div>
               <p class="font-medium">{{ doc.fileName }}</p>
               <p class="text-xs text-gray-500">{{ doc.type }}</p>
             </div>
-            <button pButton type="button" icon="pi pi-download"
-              class="p-button-sm p-button-info" (click)="downloadDocument(doc.id!)"></button>
+
+            <button
+              pButton
+              type="button"
+              icon="pi pi-download"
+              class="p-button-sm p-button-info"
+              (click)="downloadDocument(doc.id!)">
+            </button>
+
           </div>
+
         }
+
         @if (!doc.isExisting) {
-          <input type="file" (change)="onFileSelected($event, $index)" />
+
+          <input
+            type="file"
+            (change)="onFileSelected($event, $index)" />
+
           @if (doc.file) {
-            <small class="text-green-600">{{ doc.file.name }}</small>
+            <small class="text-green-600">
+              {{ doc.file.name }}
+            </small>
           }
+
         }
+
         <p-dropdown
           [options]="[
-            { label: 'Contract',       value: 'Contract' },
+            { label: 'Contract', value: 'Contract' },
             { label: 'Driving Licence', value: 'DrivingLicence' },
-            { label: 'National ID',    value: 'NationalId' }
+            { label: 'National ID', value: 'NationalId' }
           ]"
           [(ngModel)]="doc.type"
           [ngModelOptions]="{ standalone: true }"
@@ -196,21 +463,34 @@
           appendTo="body"
           styleClass="w-full">
         </p-dropdown>
-        <button pButton type="button" icon="pi pi-trash" label="Remove"
-          class="p-button-danger w-full" (click)="removeDocument($index)"></button>
+
+        <button
+          pButton
+          type="button"
+          icon="pi pi-trash"
+          label="Remove"
+          class="p-button-danger w-full"
+          (click)="removeDocument($index)">
+        </button>
+
       </div>
+
     }
+
   </div>
 
   <!-- SUBMIT -->
   <div class="flex justify-end">
-    <button pButton
+
+    <button
+      pButton
       [label]="isEditMode ? 'Update' : 'Create'"
       [icon]="isEditMode ? 'pi pi-pencil' : 'pi pi-check'"
       class="p-button-success"
       [disabled]="form.invalid"
       (click)="submit()">
     </button>
+
   </div>
 
 </form>

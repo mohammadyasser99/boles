@@ -1,9 +1,11 @@
 ﻿using CarRental.Application.DTOs;
 using CarRental.Application.Interfaces;
 using CarRental.Domain.Entities;
+using CarRental.Domain.Enums;
 using CarRental.Domain.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using static System.Net.WebRequestMethods;
 
 
 namespace CarRental.Application.Services
@@ -15,18 +17,21 @@ namespace CarRental.Application.Services
         private readonly IExcelEntranceFeeParserService _excelParser;
         private readonly IDebtCalculatorService _debtCalculator;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IPaymentRepository _PaymentRepository;
         public EntranceFeeService(
             IEntranceFeeRepository entranceFeeRepository,
             ICarRepository carRepository,
             IExcelEntranceFeeParserService excelParser,
             IDebtCalculatorService debtCalculator,
-            IUnitOfWork unitOfWork)
+            IUnitOfWork unitOfWork,
+            IPaymentRepository paymentRepository)
         {
             _entranceFeeRepository = entranceFeeRepository;
             _carRepository = carRepository;
             _excelParser = excelParser;
             _debtCalculator = debtCalculator;
             _unitOfWork = unitOfWork;
+            _PaymentRepository = paymentRepository;
         }
 
         public async Task<EntranceFeeImportResultDto> ImportEntranceFeesFromExcelAsync(IFormFile file)
@@ -65,23 +70,67 @@ namespace CarRental.Application.Services
                 }
 
                 // Step 2: Insert entrance fees
-                var feesToAdd = newRows.Select(row => new EntranceFee
+                var feesToAdd = new List<EntranceFee>();
+
+                foreach (var row in newRows)
                 {
-                    Id = Guid.NewGuid(),
-                    TripNumber = row.TripNumber,
-                    CarPlate = row.CarPlate,
-                    Amount = row.Amount,
-                    GateName = row.GateName,
-                    Direction = row.Direction,
-                    TripDate = row.TripDate,
-                    ImportedAt = DateTime.UtcNow
-                }).ToList();
+                    var car = await _carRepository
+                        .GetAll()
+                        .Include(x => x.Client)
+                        .FirstOrDefaultAsync(x => x.CarPlate == row.CarPlate);
+
+                    decimal amount = row.Amount;
+                    decimal paidAmount = 0;
+                    bool isPaid = false;
+
+                    // Pay from user balance if available
+                    if (car?.Client != null && car.Client.Balance > 0)
+                    {
+                        decimal amountFromBalance = Math.Min(car.Client.Balance, amount);
+
+                        paidAmount = amountFromBalance;
+                        amount -= amountFromBalance;
+
+                        car.Client.Balance -= amountFromBalance;
+
+                        isPaid = amount <= 0;
+                        // Create payment record
+                        await _PaymentRepository.AddAsync(new Payment
+                        {
+                            Id = Guid.NewGuid(),
+                            Amount = amountFromBalance,
+                            PaidAt = row.TripDate.HasValue
+                                ? DateOnly.FromDateTime(row.TripDate.Value)
+                                : DateOnly.FromDateTime(DateTime.UtcNow),
+
+                            Car = car,
+                            User = car.Client,
+                            PaymentType = PaymentType.EntranceFees,
+                            TripNumber = row.TripNumber
+                        });
+                    }
+
+                    var fee = new EntranceFee
+                    {
+                        Id = Guid.NewGuid(),
+                        TripNumber = row.TripNumber,
+                        CarPlate = row.CarPlate,
+                        Amount = row.Amount,
+                        PaidAmount = paidAmount,
+                        IsPaid = isPaid,
+                        GateName = row.GateName,
+                        Direction = row.Direction,
+                        TripDate = row.TripDate,
+                        ImportedAt = DateTime.UtcNow
+                    };
+
+                    feesToAdd.Add(fee);
+                }
 
                 if (feesToAdd.Any())
                     await _entranceFeeRepository.AddRangeAsync(feesToAdd);
 
                 // Step 3: Recalculate TotalDebt for each affected car  ✅ FIXED
-                var carSummaries = new List<CarEntranceFeeSummaryDto>();
                 await _unitOfWork.SaveChangesAsync();
                 await _unitOfWork.CommitAsync();
 
@@ -106,7 +155,7 @@ namespace CarRental.Application.Services
 
         public async Task MarkAsPaidAsync(string TripNumber)
         {
-            var fee = await _entranceFeeRepository.GetAll().Where(x=>x.TripNumber ==TripNumber).FirstOrDefaultAsync();
+            var fee = await _entranceFeeRepository.GetAll().Where(x=>x.TripNumber ==TripNumber).Include(x=>x.Car).FirstOrDefaultAsync();
 
             if (fee == null)
                 throw new Exception("Entrance fee not found.");
@@ -117,6 +166,19 @@ namespace CarRental.Application.Services
             fee.IsPaid = true;
 
             await _entranceFeeRepository.UpdateAsync(fee);
+            await _PaymentRepository.AddAsync(new Payment
+            {
+                Id = Guid.NewGuid(),
+                Amount = fee.Amount,
+                PaidAt = fee.TripDate.HasValue
+   ? DateOnly.FromDateTime(fee.TripDate.Value)
+   : DateOnly.FromDateTime(DateTime.UtcNow),
+
+                Car = fee.Car,
+                User = fee.Car.Client,
+                PaymentType = PaymentType.Fines,
+                TripNumber = fee.TripNumber
+            });
             await _unitOfWork.SaveChangesAsync();
         }
 
