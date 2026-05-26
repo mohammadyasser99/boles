@@ -128,7 +128,7 @@ frontend/yarn-debug.log*
 frontend/yarn-error.log*
 
 # Environment files
-frontend/src/environments/environment*.ts
+
 
 # IDE / misc
 frontend/.editorconfig
