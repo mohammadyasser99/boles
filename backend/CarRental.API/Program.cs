@@ -3,6 +3,7 @@ using CarRental.API.Middleware;
 using CarRental.Infrastructure;
 using CarRental.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,16 +21,25 @@ builder.Services.AddCors(options =>
         policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
 });
 
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Information()
+    .WriteTo.File(
+        "logs/log-.txt",
+        rollingInterval: RollingInterval.Day,
+        retainedFileCountLimit: 7)
+    .CreateLogger();
+
+builder.Host.UseSerilog();
 // ── App pipeline ─────────────────────────────────────────────────────────────
 var app = builder.Build();
 
 // Auto-migrate on startup
-using (var scope = app.Services.CreateScope())
+/*using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.Migrate();
 }
-
+*/
 app.UseMiddleware<GlobalExceptionMiddleware>();
 
 if (app.Environment.IsDevelopment())

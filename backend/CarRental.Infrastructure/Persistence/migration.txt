@@ -1,4 +1,4 @@
-﻿dotnet ef migrations add addingDownPayment --project CarRental.Infrastructure --startup-project CarRental.API
+﻿dotnet ef migrations add addinglockuser --project CarRental.Infrastructure --startup-project CarRental.API
 
 
 dotnet ef database update --project CarRental.Infrastructure --startup-project CarRental.API
