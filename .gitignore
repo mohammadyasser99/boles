@@ -110,6 +110,7 @@ $RECYCLE.BIN/
 *.bak
 *.swp
 
+backend/CarRental.API/appsettings.production.json
 ## Angular / Node
 
 # Node modules
