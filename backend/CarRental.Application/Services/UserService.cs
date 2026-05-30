@@ -514,7 +514,8 @@ public class UserService : IUserService
                   d.ContentType,
                   d.FileSizeBytes,
                   d.UploadedAt
-              )).ToList()
+              )).ToList(),
+              u.DownPayment
           ))
           .FirstOrDefaultAsync();
 

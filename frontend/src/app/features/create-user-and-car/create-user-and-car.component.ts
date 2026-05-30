@@ -87,54 +87,45 @@ export class CreateUserAndCarComponent implements OnDestroy {
 
   // ─────────────────────────────────────────────────────────────────────
 initForm() {
-  this.form = this.fb.group({
-    name: ['', Validators.required],
+this.form = this.fb.group({
+  name: ['', Validators.required],
+  phoneNumber: ['', Validators.required],
+  email: ['', [Validators.required, Validators.email]],
+  nationalId: ['', Validators.required],
 
-    phoneNumber: ['', Validators.required],
+  downPayment: [0], // NEW
 
-    email: ['', [Validators.required, Validators.email]],
+  dateOfPayment: [null, Validators.required],
+  joinDate: [null, Validators.required],
+  contractExpiry: [null, Validators.required],
 
-    nationalId: ['', Validators.required],
+  carPlate: [
+    '',
+    [
+      Validators.required,
+      Validators.pattern(/^[0-9]+$/)
+    ]
+  ],
 
-    // ✅ REQUIRED
-    dateOfPayment: [null, Validators.required],
+  brand: [''],
+  modelName: [''],
+  year: [null],
 
-    joinDate: [null, Validators.required],
+  chassisNumber: [
+    '',
+    [
+      Validators.required,
+      Validators.minLength(17),
+      Validators.maxLength(17),
+      Validators.pattern(/^[A-HJ-NPR-Z0-9]+$/i)
+    ]
+  ],
 
-    contractExpiry: [null, Validators.required],
-
-    // ✅ ONLY NUMBERS
-    carPlate: [
-      '',
-      [
-        Validators.required,
-        Validators.pattern(/^[0-9]+$/)
-      ]
-    ],
-
-    brand: [''],
-
-    modelName: [''],
-
-    year: [null],
-
-    // ✅ GLOBAL CHASSIS VALIDATION
-    chassisNumber: [
-      '',
-      [
-        Validators.required,
-        Validators.minLength(17),
-        Validators.maxLength(17),
-        Validators.pattern(/^[A-HJ-NPR-Z0-9]+$/i)
-      ]
-    ],
-
-    userId: [null]
-  },
-  {
-    // ✅ JOIN DATE MUST BE BEFORE EXPIRY
-    validators: this.dateRangeValidator
-  });
+  userId: [null]
+},
+{
+  validators: this.dateRangeValidator
+});
 }
 
 dateRangeValidator(group: FormGroup) {
@@ -230,11 +221,13 @@ private loadUserWithCar(userId: string) {
       const data = res?.data;
       if (!data) return;
 
-   this.form.patchValue({
+this.form.patchValue({
   name: data.name ?? '',
   phoneNumber: data.phoneNumber ?? '',
   email: data.email ?? '',
   nationalId: data.nationalId ?? '',
+
+  downPayment: data.downPayment ?? 0, // NEW
 
   dateOfPayment: data.dateOfPayment ? new Date(data.dateOfPayment) : null,
   joinDate: data.joinDate ? new Date(data.joinDate) : null,
@@ -329,6 +322,10 @@ private toDateOnly(value: any): string | null {
     formData.append('model',       v.modelName    || '');
     formData.append('year',        v.year         ?? '');
     formData.append('chassisNumber', v.chassisNumber || '');
+    formData.append(
+  'downPayment',
+  String(v.downPayment ?? 0)
+);
     // ❌ rentalPrice removed
 
     if (v.userId)         formData.append('userId',         v.userId);
@@ -377,11 +374,28 @@ private toDateOnly(value: any): string | null {
     });
   }
 
-  reset() {
-    this.form.reset({ name:'', phoneNumber:'', email:'', nationalId:'',
-      dateOfPayment:null, joinDate:null, contractExpiry:null,
-      carPlate:'', brand:'', modelName:'', year:null, chassisNumber:'', userId:null });
-    this.paymentRows = [];
-    this.documents = [];
-  }
+reset() {
+  this.form.reset({
+    name: '',
+    phoneNumber: '',
+    email: '',
+    nationalId: '',
+
+    downPayment: 0, // NEW
+
+    dateOfPayment: null,
+    joinDate: null,
+    contractExpiry: null,
+
+    carPlate: '',
+    brand: '',
+    modelName: '',
+    year: null,
+    chassisNumber: '',
+    userId: null
+  });
+
+  this.paymentRows = [];
+  this.documents = [];
+}
 }

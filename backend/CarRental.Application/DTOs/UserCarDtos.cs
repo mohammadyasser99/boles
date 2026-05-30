@@ -14,7 +14,8 @@ public record UserWithCarDto(
     DateOnly ContractExpiry,
     string? PaymentScheduleJson,   // ← ADD THIS
     CarDtoo? Car,
-    List<UserDocumentDto> Documents
+    List<UserDocumentDto> Documents,
+    decimal? DownPayment
 );
 
 public record CarDtoo(

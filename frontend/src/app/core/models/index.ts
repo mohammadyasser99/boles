@@ -69,6 +69,7 @@ export interface CarSummaryDto {
   userName:       string | null;
   paymentDayOfMonth: number; 
   balance?: number;
+  downPayment: number;
 }
 export interface MonthlyRentalPaymentDto {
   id: string;

@@ -34,7 +34,8 @@ namespace CarRental.Application.DTOs
         DateOnly ContractExpiry,
         string? UserName,
         int PaymentDayOfMonth,
-        decimal? Balance
+        decimal? Balance,
+        decimal? DownPayment
     );
 
     public record UpdateMonthlyRentalPaymentRequestDto(

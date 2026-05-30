@@ -472,7 +472,8 @@ namespace CarRental.Application.Services
                     ContractExpiry: client.ContractExpiry,
                     UserName: client.Name,
                     paymentDay,
-                    Balance: client?.Balance
+                    Balance: client?.Balance,
+                    DownPayment:client?.DownPayment
                 );
             }
             catch (KeyNotFoundException)
