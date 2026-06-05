@@ -25,34 +25,34 @@
 
           <a routerLink="/dashboard" routerLinkActive="active" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-surface-600 hover:bg-surface-50 transition-all duration-200 cursor-pointer no-underline">
             <i class="nav-icon pi pi-th-large text-brand-400 w-4 text-center"></i>
-            <span class="font-body font-medium text-sm">Dashboard</span>
+            <span class="font-body font-medium text-sm">لوحة التحكم</span>
           </a>
 
           <a routerLink="/cars" routerLinkActive="active" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-surface-600 hover:bg-surface-50 transition-all duration-200 cursor-pointer no-underline">
             <i class="nav-icon pi pi-car text-brand-400 w-4 text-center"></i>
-            <span class="font-body font-medium text-sm">Cars</span>
+            <span class="font-body font-medium text-sm">السيارات</span>
           </a>
 
           <a routerLink="/users" routerLinkActive="active" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-surface-600 hover:bg-surface-50 transition-all duration-200 cursor-pointer no-underline">
             <i class="nav-icon pi pi-users text-brand-400 w-4 text-center"></i>
-            <span class="font-body font-medium text-sm">Users</span>
+            <span class="font-body font-medium text-sm">المستخدمين</span>
           </a>
 
                     <a routerLink="/users-arrear" routerLinkActive="active" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-surface-600 hover:bg-surface-50 transition-all duration-200 cursor-pointer no-underline">
             <i class="nav-icon pi pi-users text-brand-400 w-4 text-center"></i>
-            <span class="font-body font-medium text-sm">users arrears</span>
+            <span class="font-body font-medium text-sm">متأخرات العملاء</span>
           </a>
 
           <p class="text-xs font-display font-600 text-surface-200 uppercase tracking-widest px-3 mb-3 mt-5">Finance</p>
 
           <a routerLink="/fines" routerLinkActive="active" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-surface-600 hover:bg-surface-50 transition-all duration-200 cursor-pointer no-underline">
             <i class="nav-icon pi pi-file-excel text-brand-400 w-4 text-center"></i>
-            <span class="font-body font-medium text-sm">Traffic Fines</span>
+            <span class="font-body font-medium text-sm">مخالفات السيارات</span>
           </a>
 
           <a routerLink="/entrance-fees" routerLinkActive="active" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-surface-600 hover:bg-surface-50 transition-all duration-200 cursor-pointer no-underline">
             <i class="nav-icon pi pi-map-marker text-brand-400 w-4 text-center"></i>
-            <span class="font-body font-medium text-sm">Entrance Fees</span>
+            <span class="font-body font-medium text-sm">سالك</span>
           </a>
           <a routerLink="/monthly-rental-payments"
    routerLinkActive="active"
@@ -61,17 +61,17 @@
   <i class="nav-icon pi pi-money-bill text-brand-400 w-4 text-center"></i>
 
   <span class="font-body font-medium text-sm">
-    Monthly Payments
+    تقارير دفع الإيجار الشهري
   </span>
 </a>
 
-          @if (auth.isSuperAdmin()) {
+          <!-- @if (auth.isSuperAdmin()) {
             <p class="text-xs font-display font-600 text-surface-200 uppercase tracking-widest px-3 mb-3 mt-5">System</p>
             <a routerLink="/admins" routerLinkActive="active" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-surface-600 hover:bg-surface-50 transition-all duration-200 cursor-pointer no-underline">
               <i class="nav-icon pi pi-shield text-brand-400 w-4 text-center"></i>
               <span class="font-body font-medium text-sm">Admins</span>
             </a>
-          }
+          } -->
         </nav>
 
         <!-- Admin profile -->

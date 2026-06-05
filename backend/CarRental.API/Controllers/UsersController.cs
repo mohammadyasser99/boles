@@ -29,6 +29,29 @@ public class UsersController : ControllerBase
         return Ok(ApiResponse<IEnumerable<UserDto>>.Ok(result));
     }
 
+    /// <summary>
+    /// Get users with their assigned cars.
+    /// </summary>
+    [HttpGet("users-with-cars")]
+    [ProducesResponseType(typeof(ApiResponse<IEnumerable<UserCarLookupDto>>), 200)]
+    public async Task<IActionResult> GetUsersWithCars()
+    {
+        var result = await _userService.GetUsersWithCarsAsync();
+
+        return Ok(
+            ApiResponse<IEnumerable<UserCarLookupDto>>.Ok(result)
+        );
+    }
+
+    [HttpPatch("{userId}/balance")]
+    [ProducesResponseType(typeof(ApiResponse<bool>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<bool>), 400)]
+    public async Task<IActionResult> ModifyBalance(Guid userId, [FromBody] ModifyBalanceRequestDto request)
+    {
+        var result = await _userService.ModifyBalanceAsync(userId, request);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
     /// <summary>Get user by ID.</summary>
     [HttpGet("{id:guid}")]
     [ProducesResponseType(typeof(ApiResponse<UserDto>), 200)]

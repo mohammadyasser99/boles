@@ -1,3 +1,4 @@
+using CarRental.Application.Common;
 using CarRental.Application.DTOs;
 using CarRental.Application.Interfaces;
 using CarRental.Domain.Entities;
@@ -25,6 +26,58 @@ public class UserService : IUserService
         _logger = logger;
     }
 
+    public async Task<ApiResponse<bool>> ModifyBalanceAsync(Guid userId, ModifyBalanceRequestDto request)
+    {
+        var user = await _userRepository.GetByIdAsync(userId);
+        if (user == null)
+            return ApiResponse<bool>.Fail("User not found.");
+
+        switch (request.Operation)
+        {
+            case "Add":
+                user.Balance += request.Amount;
+                break;
+            case "Subtract":
+                if (user.Balance < request.Amount)
+                    return ApiResponse<bool>.Fail($"Insufficient balance. Available: {user.Balance:F2}");
+                user.Balance -= request.Amount;
+                break;
+            case "Set":
+                user.Balance = request.Amount;
+                break;
+            default:
+                return ApiResponse<bool>.Fail("Invalid operation. Use Add, Subtract, or Set.");
+        }
+
+        await _unitOfWork.SaveChangesAsync();
+        return ApiResponse<bool>.Ok(true, $"Balance updated successfully. New balance: {user.Balance:F2}");
+    }
+    public async Task<IEnumerable<UserCarLookupDto>> GetUsersWithCarsAsync()
+    {
+        try
+        {
+            var users = await _userRepository
+                .GetAll()
+                .Include(u => u.Cars)
+                .Where(u => u.Cars.Any())
+                .Select(u => new UserCarLookupDto(
+                    u.Id,
+                    u.Name,
+                    u.Balance,
+                    u.Cars.Select(c => new CarLookupDto(
+                        c.CarPlate
+                    )).ToList()
+                ))
+                .ToListAsync();
+
+            return users;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting users with cars");
+            throw new Exception("Error happened when getting users with cars");
+        }
+    }
     public async Task<IEnumerable<UserDto>> GetAllUsersAsync()
     {
         try

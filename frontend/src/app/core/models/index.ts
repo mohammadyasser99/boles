@@ -89,6 +89,7 @@ export interface CreateMonthlyRentalPaymentRequestDto {
   violationDate?: string | null;
 
   tripNumber?: string | null;
+  useBalance?: boolean; 
 }
 export interface UpdateMonthlyRentalPaymentRequestDto {
   amount: number;

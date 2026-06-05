@@ -19,7 +19,12 @@ import {
 export class UserService {
   private http = inject(HttpClient);
   private base = `${environment.apiUrl}/users`;
-
+  modifyBalance(userId: string, amount: number, operation: 'Add' | 'Subtract' | 'Set') {
+  return this.http.patch<any>(`${this.base}/${userId}/balance`, { amount, operation });
+}
+getUsersWithCars() {
+  return this.http.get<any>(`${this.base}/users-with-cars`);
+}
   getAll(): Observable<ApiResponse<User[]>> { return this.http.get<ApiResponse<User[]>>(this.base); }
 getDocumentUrl(documentId: string): Observable<string> {
   return this.http.get(`${this.base}/documents/${documentId}/download`, {

@@ -2,24 +2,25 @@
 <div class="space-y-5">
   <div class="flex items-center justify-between">
     <div>
-      <h1 class="font-display font-800 text-surface-800 text-2xl">Users</h1>
-      <p class="text-surface-400 text-sm mt-1">Manage rental customers</p>
+      <h1 class="font-display font-800 text-surface-800 text-2xl">العملاء</h1>
+      <p class="text-surface-400 text-sm mt-1">إدارة عملاء التأجير</p>
     </div>
   
     <div class="flex gap-2">
       <!-- 🟡 Create User Car -->
       <button
         pButton
-        label="Create User Car"
+        label="اضافة مستخدم و سيارة"
         icon="pi pi-car"
-(click)="goToCreateUserCar()"        class="!bg-yellow-400 !border-yellow-400 !text-black !font-display !font-700 !rounded-xl hover:!bg-yellow-500"
+(click)="goToCreateUserCar()"
+class="!bg-yellow-400 !border-yellow-400 !text-black !font-display !font-700 !rounded-xl hover:!bg-yellow-500"
       ></button>
   
       <!-- 🔵 Add User -->
       <button
         (click)="openCreate()"
         pButton
-        label="Add User"
+        label="اضافة عميل"
         icon="pi pi-user-plus"
         class="!bg-brand-600 !border-brand-600 !font-display !font-700 !rounded-xl shadow-glow"
       ></button>
@@ -28,13 +29,13 @@
   <div class="bg-white rounded-2xl shadow-card border border-surface-200 overflow-hidden"> <p-table [value]="users()"
       [loading]="loading()" [paginator]="true" [rows]="10" styleClass="border-0"> <ng-template pTemplate="caption">
         <div class="flex items-center px-2 py-1"> <span class="text-xs text-surface-400 font-mono ml-auto">{{
-            users().length }} users</span> </div>
+            users().length }} العملاء</span> </div>
       </ng-template> <ng-template pTemplate="header">
         <tr>
-          <th>Name</th>
-          <th>Email</th>
-          <th>Phone</th>
-          <th class="text-right">Actions</th>
+          <th>الاسم</th>
+          <th>البريد الإلكتروني</th>
+          <th>الهاتف</th>
+          <th class="text-right">الإجراءات</th>
         </tr>
       </ng-template> <ng-template pTemplate="body" let-user>
         <tr>
@@ -47,7 +48,7 @@
           <td><span class="text-sm text-surface-600">{{ user.phoneNumber }}</span></td>
           <td>
             <div class="flex justify-end gap-1"> <button pButton icon="pi pi-pencil" pTooltip="Edit"
-                tooltipPosition="top" (click)="openEdit(user)"></button> <button pButton label="Edit User With Car"
+                tooltipPosition="top" (click)="openEdit(user)"></button> <button pButton label="تعديل العميل و السيارة"
                 icon="pi pi-car" class="!bg-yellow-500 !border-yellow-500 !text-black" tooltipPosition="top"
                 (click)="edituserandcar(user)"></button> </div>
           </td>
@@ -58,28 +59,28 @@
         </tr>
       </ng-template> </p-table> </div>
 </div> <!-- Create/Edit Dialog --> 
-<p-dialog [header]="editMode() ? 'Edit User' : 'Add New User'"
+<p-dialog [header]="editMode() ? 'تعديل العميل' : 'اضافة عميل'"
   [(visible)]="showDialog" [modal]="true" [style]="{width:'440px'}">
   <form [formGroup]="userForm" class="space-y-4 pt-2">
 
     <!-- Name -->
     <div class="space-y-1.5">
       <label class="text-xs font-display font-600 text-surface-500 uppercase tracking-wider">
-        Full Name *
+        الاسم بالكامل *
       </label>
   
       <input pInputText formControlName="name" class="w-full !rounded-xl" />
   
       <small class="text-red-500 text-xs"
         *ngIf="userForm.get('name')?.touched && userForm.get('name')?.invalid">
-        Name is required
+        اسم العميل مطلوب
       </small>
     </div>
   
     <!-- Email -->
     <div class="space-y-1.5">
       <label class="text-xs font-display font-600 text-surface-500 uppercase tracking-wider">
-        Email *
+        البريد الإلكتروني *
       </label>
   
       <input pInputText formControlName="email" class="w-full !rounded-xl" />
@@ -87,8 +88,8 @@
       <small class="text-red-500 text-xs"
         *ngIf="userForm.get('email')?.touched && userForm.get('email')?.invalid">
   
-        <span *ngIf="userForm.get('email')?.errors?.['required']">Email is required</span>
-        <span *ngIf="userForm.get('email')?.errors?.['email']">Invalid email format</span>
+        <span *ngIf="userForm.get('email')?.errors?.['required']">البريد الإلكتروني مطلوب</span>
+        <span *ngIf="userForm.get('email')?.errors?.['email']">تنسيق البريد الإلكتروني غير صحيح</span>
   
       </small>
     </div>
@@ -96,35 +97,35 @@
     <!-- Phone -->
     <div class="space-y-1.5">
       <label class="text-xs font-display font-600 text-surface-500 uppercase tracking-wider">
-        Phone Number *
+        رقم الهاتف *
       </label>
   
       <input pInputText formControlName="phoneNumber" class="w-full !rounded-xl" />
   
       <small class="text-red-500 text-xs"
         *ngIf="userForm.get('phoneNumber')?.touched && userForm.get('phoneNumber')?.invalid">
-        Phone is required
+        رقم الهاتف مطلوب
       </small>
     </div>
   
     <!-- National ID -->
     <div class="space-y-1.5">
       <label class="text-xs font-display font-600 text-surface-500 uppercase tracking-wider">
-        National ID *
+        رقم الهوية *
       </label>
   
       <input pInputText formControlName="nationalId" class="w-full !rounded-xl" />
   
       <small class="text-red-500 text-xs"
         *ngIf="userForm.get('nationalId')?.touched && userForm.get('nationalId')?.invalid">
-        National ID is required
+        رقم الهوية مطلوب
       </small>
     </div>
   
     <!-- Join Date -->
     <div class="space-y-1.5">
       <label class="text-xs font-display font-600 text-surface-500 uppercase tracking-wider">
-        Join Date *
+        تاريخ الانضمام *
       </label>
   
       <input
@@ -135,14 +136,14 @@
   
       <small class="text-red-500 text-xs"
         *ngIf="userForm.get('joinDate')?.touched && userForm.get('joinDate')?.invalid">
-        Join date is required
+        تاريخ الانضمام مطلوب
       </small>
     </div>
 
         <!-- Contract Expiry Date -->
     <div class="space-y-1.5">
       <label class="text-xs font-display font-600 text-surface-500 uppercase tracking-wider">
-        expiry date *
+        تاريخ انتهاء العقد *
       </label>
   
       <input
@@ -153,20 +154,23 @@
   
       <small class="text-red-500 text-xs"
         *ngIf="userForm.get('contractExpiry')?.touched && userForm.get('contractExpiry')?.invalid">
-        Contract expiry date is required
+        تاريخ انتهاء العقد مطلوب
       </small>
     </div>
 <!--date of payment-->
     <div class="space-y-1.5">
       <label class="text-xs font-display font-600 text-surface-500 uppercase tracking-wider">
-        payment Date
+        تاريخ الدفع *
       </label>
   
       <input
       type="date"
       formControlName="dateOfPayment"
       class="w-full border border-surface-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500">
-
+      <small class="text-red-500 text-xs"
+        *ngIf="userForm.get('dateOfPayment')?.touched && userForm.get('dateOfPayment')?.invalid">
+        تاريخ الدفع مطلوب
+      </small>
     </div>
   
 <!-- File -->
@@ -253,7 +257,7 @@
         pButton
         type="button"
         icon="pi pi-trash"
-        label="Remove"
+        label="حذف"
         class="!bg-red-500 !border-red-500 !rounded-xl w-full"
         (click)="removeDocument($index)">
       </button>
@@ -268,7 +272,7 @@
       (click)="showDialog=false"></button> 
       <button 
       pButton 
-      [label]="editMode() ? 'Update' : 'Create'" 
+      [label]="editMode() ? 'تحديث' : 'أضافة'" 
       icon="pi pi-check"
       [loading]="saving()" 
       [disabled]="userForm.invalid"

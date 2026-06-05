@@ -36,4 +36,13 @@ namespace CarRental.Application.DTOs
     string? Direction
 );
 
+    public record EntranceFeeRowDto(
+     string TripNumber,
+     string CarPlate,
+     decimal Amount,
+     string? GateName,
+     string? Direction,
+     DateTime? TripDate
+ );
+
 }

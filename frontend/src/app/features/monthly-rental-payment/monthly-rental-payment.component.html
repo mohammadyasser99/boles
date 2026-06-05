@@ -1,14 +1,16 @@
 <p-toast></p-toast>
 
 <div class="space-y-5">
-  <div class="flex items-center justify-between">
-    <div>
-      <h1 class="font-display font-800 text-surface-800 text-2xl">Payments</h1>
-      <p class="text-surface-400 text-sm mt-1">All rental payments history</p>
-    </div>
-    <button pButton label="Add Payment" icon="pi pi-plus" (click)="openCreate()"
-      class="!bg-brand-600 !border-brand-600 !font-display !font-700 !rounded-xl"></button>
-  </div>
+<div class="flex items-center gap-2">
+  <button pButton label="تعديل الرصيد" icon="pi pi-wallet"
+    (click)="openBalanceDialog()"
+    severity="secondary"
+    class="!rounded-xl !font-display !font-700">
+  </button>
+  <button pButton label="إضافة دفع" icon="pi pi-plus" (click)="openCreate()"
+    class="!bg-brand-600 !border-brand-600 !font-display !font-700 !rounded-xl">
+  </button>
+</div>
 
   <div class="bg-white rounded-2xl shadow-card border border-surface-200 overflow-hidden">
     <p-table
@@ -73,11 +75,11 @@
       <!-- Header -->
       <ng-template pTemplate="header">
         <tr>
-          <th>Car Plate</th>
-          <th>Client</th>
-          <th>Type</th>
-          <th class="text-right">Amount (AED)</th>
-          <th>Paid At</th>
+          <th>لوحة السيارة</th>
+          <th>العميل</th>
+          <th>النوع</th>
+          <th class="text-right">المبلغ (درهم)</th>
+          <th>مدفوع في</th>
           <!-- <th class="text-right">Actions</th> -->
         </tr>
       </ng-template>
@@ -135,7 +137,7 @@
 </div>
 
 <!-- Add / Edit Dialog -->
-<p-dialog [header]="editMode() ? 'Edit Payment' : 'Add Payment'" [(visible)]="showDialog" [modal]="true" [style]="{width:'450px'}">
+<p-dialog [header]="editMode() ? 'تعديل الدفع' : 'إضافة دفع'" [(visible)]="showDialog" [modal]="true" [style]="{width:'450px'}">
   <form [formGroup]="form" class="space-y-4 pt-2">
 
     @if (!editMode()) {
@@ -176,7 +178,40 @@
       </div>
 
     }
+    <!--Payment Method-->
+<div class="space-y-1.5">
+  <label class="text-xs font-display font-600 text-surface-500 uppercase">
+    Payment Method *
+  </label>
 
+<p-dropdown
+  [options]="paymentSourceOptions"
+  formControlName="paymentSource"
+  optionLabel="label"
+  optionValue="value"
+  placeholder="Select payment method"
+  appendTo="body"
+  class="w-full">
+</p-dropdown>
+</div>
+
+@if (form.get('paymentSource')?.value === 'Balance') {
+  <div class="p-3 rounded-xl border"
+    [ngClass]="form.hasError('insufficientBalance')
+      ? 'bg-red-50 border-red-300'
+      : 'bg-green-50 border-green-200'">
+    <p class="text-sm" [ngClass]="form.hasError('insufficientBalance') ? 'text-red-600' : 'text-surface-600'">
+      Available Balance:
+      <b>{{ selectedBalance | number:'1.2-2' }} AED</b>
+    </p>
+    @if (form.hasError('insufficientBalance')) {
+      <p class="text-xs text-red-500 mt-1">
+        <i class="pi pi-exclamation-triangle mr-1"></i>
+        Amount exceeds available balance
+      </p>
+    }
+  </div>
+}
     <!-- Amount -->
     <div class="space-y-1.5">
       <label class="text-xs font-display font-600 text-surface-500 uppercase">Amount *</label>
@@ -265,6 +300,98 @@
       [disabled]="form.invalid"
       class="!bg-brand-600 !border-brand-600 !rounded-xl !font-display !font-700"
       (click)="save()">
+    </button>
+  </ng-template>
+</p-dialog>
+
+<!-- Modify Balance Dialog -->
+<p-dialog header="Modify User Balance" [(visible)]="showBalanceDialog" [modal]="true" [style]="{width:'420px'}">
+  <form [formGroup]="balanceForm" class="space-y-4 pt-2">
+
+    <!-- User -->
+    <div class="space-y-1.5">
+      <label class="text-xs font-display font-600 text-surface-500 uppercase">User *</label>
+      <p-dropdown
+        [options]="userOptions()"
+        formControlName="userId"
+        optionLabel="label"
+        optionValue="value"
+        placeholder="Select user"
+        appendTo="body"
+        [filter]="true"
+        filterPlaceholder="Search user..."
+        class="w-full">
+      </p-dropdown>
+    </div>
+
+    <!-- Current Balance -->
+    @if (balanceForm.get('userId')?.value) {
+      <div class="p-3 bg-blue-50 border border-blue-200 rounded-xl">
+        <p class="text-sm text-blue-700">
+          Current Balance:
+          <b>{{ selectedUserBalance | number:'1.2-2' }} AED</b>
+        </p>
+      </div>
+    }
+
+    <!-- Operation -->
+    <div class="space-y-1.5">
+      <label class="text-xs font-display font-600 text-surface-500 uppercase">Operation *</label>
+      <p-dropdown
+        [options]="operationOptions"
+        formControlName="operation"
+        optionLabel="label"
+        optionValue="value"
+        appendTo="body"
+        class="w-full">
+      </p-dropdown>
+    </div>
+
+    <!-- Amount -->
+    <div class="space-y-1.5">
+      <label class="text-xs font-display font-600 text-surface-500 uppercase">Amount (AED) *</label>
+      <p-inputNumber
+        formControlName="amount"
+        [min]="0.01"
+        [minFractionDigits]="2"
+        styleClass="w-full"
+        inputStyleClass="w-full !rounded-xl">
+      </p-inputNumber>
+      <small class="text-red-500 text-xs"
+        *ngIf="balanceForm.get('amount')?.touched && balanceForm.get('amount')?.invalid">
+        Amount is required and must be greater than 0
+      </small>
+    </div>
+
+    <!-- Preview -->
+    @if (balanceForm.get('userId')?.value && balanceForm.get('amount')?.value) {
+      <div class="p-3 bg-surface-50 border border-surface-200 rounded-xl">
+        <p class="text-sm text-surface-600">
+          New balance will be:
+          <b class="text-surface-800">
+            @if (balanceForm.get('operation')?.value === 'Add') {
+              {{ (selectedUserBalance + balanceForm.get('amount')!.value) | number:'1.2-2' }} AED
+            } @else if (balanceForm.get('operation')?.value === 'Subtract') {
+              {{ (selectedUserBalance - balanceForm.get('amount')!.value) | number:'1.2-2' }} AED
+            } @else {
+              {{ balanceForm.get('amount')!.value | number:'1.2-2' }} AED
+            }
+          </b>
+        </p>
+      </div>
+    }
+
+  </form>
+
+  <ng-template pTemplate="footer">
+    <button pButton label="Cancel" class="!p-button-text !rounded-xl"
+      (click)="showBalanceDialog = false">
+    </button>
+    <button pButton label="Save" icon="pi pi-check"
+      [loading]="savingBalance()"
+      [disabled]="balanceForm.invalid"
+      class="!bg-brand-600 !border-brand-600 !rounded-xl !font-display !font-700"
+      (click)="saveBalance()">
     </button>
   </ng-template>
 </p-dialog>

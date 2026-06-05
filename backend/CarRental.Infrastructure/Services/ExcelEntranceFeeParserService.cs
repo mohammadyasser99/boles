@@ -2,6 +2,9 @@
 using CarRental.Application.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using NPOI.HSSF.UserModel;
+using NPOI.SS.UserModel;
+using NPOI.XSSF.UserModel;
 using OfficeOpenXml;
 using System;
 using System.Collections.Generic;
@@ -38,215 +41,192 @@ namespace CarRental.Infrastructure.Services
         public async Task<List<EntranceFeeRowData>> ParseEntranceFeesExcelAsync(IFormFile file)
         {
             if (file == null)
-            {
-                _logger.LogError("ParseEntranceFeesExcelAsync failed: File is null");
                 throw new ArgumentNullException(nameof(file), "Excel file cannot be null");
+
+            _logger.LogInformation("Parsing Excel file: {FileName}, {Size} bytes", file.FileName, file.Length);
+
+            await using var memStream = new MemoryStream();
+            await file.CopyToAsync(memStream);
+            memStream.Position = 0;
+
+            // Detect real format by magic bytes — NOT the extension.
+            // ExportTrips__2_.xls  → XLSX disguised as .xls  (magic: 50 4B = PK zip)
+            // ExportTrips__4_.xls  → True binary XLS / CDFV2 (magic: D0 CF 11 E0)
+            // EPPlus only handles XLSX, so it crashes on file 4.
+            // NPOI handles both via XSSFWorkbook (xlsx) and HSSFWorkbook (xls).
+            var magic = new byte[4];
+            int bytesRead = await memStream.ReadAsync(magic, 0, 4);
+            if (bytesRead < 4)
+                throw new InvalidOperationException("File is too small to be a valid Excel file.");
+            memStream.Position = 0;
+
+            bool isXlsx = magic[0] == 0x50 && magic[1] == 0x4B; // PK zip signature
+            _logger.LogDebug("Detected format: {Format}", isXlsx ? "XLSX" : "Legacy XLS");
+
+            IWorkbook workbook = isXlsx
+                ? new XSSFWorkbook(memStream)
+                : (IWorkbook)new HSSFWorkbook(memStream);
+
+            var sheet = workbook.GetSheetAt(0)
+                ?? throw new InvalidOperationException("The Excel file contains no sheets.");
+
+            _logger.LogDebug("Processing sheet: {SheetName}", sheet.SheetName);
+
+            // Find header row by scanning for "رقم الرحلة" in col 15 (0-based).
+            // In practice always row 14, but we scan to be safe.
+            int headerRowIndex = -1;
+            for (int i = 0; i <= Math.Min(sheet.LastRowNum, 30); i++)
+            {
+                var r = sheet.GetRow(i);
+                if (r == null) continue;
+                var cell = r.GetCell(15);
+                if (cell?.ToString()?.Trim() == "رقم الرحلة")
+                {
+                    headerRowIndex = i;
+                    break;
+                }
             }
 
-            _logger.LogInformation("Starting to parse Excel file: {FileName}, Size: {Size} bytes",
-                file.FileName, file.Length);
+            if (headerRowIndex == -1)
+                throw new InvalidOperationException(
+                    "Could not locate the header row. Expected 'رقم الرحلة' in the first 30 rows.");
 
-            try
+            _logger.LogDebug("Header row found at index {Index}", headerRowIndex);
+
+            // Column layout (0-based):
+            // col 1  → Amount     (المبلغ)
+            // col 2  → CarPlate   (اللوحة)
+            // col 4  → Direction  (إتجاه العبور)
+            // col 9  → GateName   (بوابة العبور)
+            // col 12 → TripTime   (وقت الرحلة)
+            // col 13 → TripDate   (تاريخ الرحلة)
+            // col 15 → TripNumber (رقم الرحلة)
+
+            var results = new List<EntranceFeeRowData>();
+
+            for (int i = headerRowIndex + 1; i <= sheet.LastRowNum; i++)
             {
-                using var stream = file.OpenReadStream();
-                using var package = new ExcelPackage(stream);
+                var row = sheet.GetRow(i);
+                if (row == null) continue;
 
-                if (package.Workbook.Worksheets.Count == 0)
+                var tripNumber = GetCellString(row, 15);
+                var carPlate = GetCellString(row, 2);
+
+                // Skip blank rows and the totals summary row at the bottom
+                // (summary: col2 = ":(المبلغ (درهم إماراتي", col4 = ":مجموع الرحلات")
+                if (string.IsNullOrWhiteSpace(tripNumber)) continue;
+                if (string.IsNullOrWhiteSpace(carPlate)) continue;
+                if (carPlate.Contains(':') || tripNumber.Contains(':')) continue;
+
+                var amountStr = GetCellString(row, 1);
+                var gateName = GetCellString(row, 9);
+                var direction = GetCellString(row, 4);
+                var tripDateStr = GetCellString(row, 13);
+                var tripTimeStr = GetCellString(row, 12);
+
+                if (!decimal.TryParse(amountStr, NumberStyles.Any,
+                        CultureInfo.InvariantCulture, out var amount))
                 {
-                    _logger.LogError("Excel file {FileName} has no worksheets", file.FileName);
-                    throw new InvalidOperationException("Excel file has no worksheets.");
+                    _logger.LogWarning("Row {Row}: could not parse amount '{Val}', skipping", i, amountStr);
+                    continue;
                 }
 
-                var sheet = package.Workbook.Worksheets[0];
-                _logger.LogInformation("Processing first worksheet: {WorksheetName}", sheet.Name);
-
-                // Build column index map from the correct header row (EPPlus is 1-based)
-                int headerRow = HeaderRowIndex + 1;
-
-                if (sheet.Dimension == null)
+                results.Add(new EntranceFeeRowData
                 {
-                    _logger.LogError("Excel sheet {SheetName} has no data dimension", sheet.Name);
-                    throw new InvalidOperationException("Excel sheet has no data.");
-                }
+                    TripNumber = tripNumber.Trim(),
+                    CarPlate = carPlate.Trim(),
+                    Amount = amount,
+                    GateName = gateName?.Trim(),
+                    Direction = direction?.Trim(),
+                    TripDate = ParseArabicDate(tripDateStr, tripTimeStr)
+                });
+            }
 
-                var headers = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-                int totalCols = sheet.Dimension.Columns;
+            _logger.LogInformation("Parsed {Count} valid rows from {FileName}", results.Count, file.FileName);
 
-                _logger.LogDebug("Scanning header row {HeaderRow} with {TotalCols} columns", headerRow, totalCols);
+            if (results.Count == 0)
+                throw new InvalidOperationException(
+                    "No valid data found in the Excel file. Please check the file format.");
 
-                for (int col = 1; col <= totalCols; col++)
+            return results;
+        }
+
+        private static string? GetCellString(IRow row, int colIndex)
+        {
+            var cell = row.GetCell(colIndex);
+            if (cell == null) return null;
+
+            return cell.CellType switch
+            {
+                CellType.Numeric => DateUtil.IsCellDateFormatted(cell)
+                    ? cell.DateCellValue?.ToString("dd/MM/yyyy") ?? string.Empty
+                    : cell.NumericCellValue.ToString(CultureInfo.InvariantCulture),
+                CellType.String => cell.StringCellValue,
+                CellType.Formula => cell.CachedFormulaResultType == CellType.Numeric
+                    ? cell.NumericCellValue.ToString(CultureInfo.InvariantCulture)
+                    : cell.StringCellValue,
+                _ => cell.ToString()
+            };
+        }
+
+        /// <summary>
+        /// Parses Arabic date strings from the Dubai RTA portal.
+        /// Format: "19أبريل2026", "31مايو2026" — optionally with time "02:40:50م" (م=PM, ص=AM).
+        /// </summary>
+        private static DateTime? ParseArabicDate(string? dateStr, string? timeStr = null)
+        {
+            if (string.IsNullOrWhiteSpace(dateStr)) return null;
+
+            var months = new Dictionary<string, int>(StringComparer.Ordinal)
+            {
+                ["يناير"] = 1,
+                ["فبراير"] = 2,
+                ["مارس"] = 3,
+                ["أبريل"] = 4,
+                ["مايو"] = 5,
+                ["يونيو"] = 6,
+                ["يوليو"] = 7,
+                ["أغسطس"] = 8,
+                ["سبتمبر"] = 9,
+                ["أكتوبر"] = 10,
+                ["نوفمبر"] = 11,
+                ["ديسمبر"] = 12
+            };
+
+            foreach (var (arabicName, monthNum) in months)
+            {
+                int idx = dateStr.IndexOf(arabicName, StringComparison.Ordinal);
+                if (idx < 0) continue;
+
+                var dayStr = dateStr[..idx];
+                var yearStr = dateStr[(idx + arabicName.Length)..];
+
+                if (!int.TryParse(dayStr, out int day)) return null;
+                if (!int.TryParse(yearStr, out int year)) return null;
+
+                int hour = 0, minute = 0, second = 0;
+
+                if (!string.IsNullOrWhiteSpace(timeStr))
                 {
-                    var header = sheet.Cells[headerRow, col].Text?.Trim();
-                    if (!string.IsNullOrEmpty(header))
+                    bool isPm = timeStr.Contains('م');
+                    var timePart = timeStr.Replace("م", "").Replace("ص", "").Trim();
+
+                    if (TimeSpan.TryParse(timePart, out var ts))
                     {
-                        headers[header] = col;
-                        _logger.LogTrace("Found header column: '{Header}' at position {Column}", header, col);
+                        hour = ts.Hours;
+                        minute = ts.Minutes;
+                        second = ts.Seconds;
+
+                        if (isPm && hour < 12) hour += 12;
+                        if (!isPm && hour == 12) hour = 0;
                     }
                 }
 
-                _logger.LogInformation("Found {HeaderCount} header columns in the Excel file", headers.Count);
-
-                // Basic Validation
-                var missingColumns = new List<string>();
-                if (!headers.ContainsKey(ColTripNumber))
-                    missingColumns.Add(ColTripNumber);
-                if (!headers.ContainsKey(ColCarPlate))
-                    missingColumns.Add(ColCarPlate);
-
-                if (missingColumns.Any())
-                {
-                    _logger.LogError("Required columns missing from Excel file: {MissingColumns}",
-                        string.Join(", ", missingColumns));
-                    throw new InvalidOperationException($"Required columns not found: {string.Join(", ", missingColumns)}");
-                }
-
-                _logger.LogInformation("Required columns validation passed. TripNumber column at index {TripNumberCol}, CarPlate column at index {CarPlateCol}",
-                    headers[ColTripNumber], headers[ColCarPlate]);
-
-                var results = new List<EntranceFeeRowData>();
-                int totalRows = sheet.Dimension.Rows;
-                int processedRows = 0;
-                int skippedRows = 0;
-                int errorRows = 0;
-
-                // Setup Arabic Culture for parsing "أبريل" and "م/ص" (PM/AM)
-                var arabicCulture = new CultureInfo("ar-AE");
-                _logger.LogDebug("Using Arabic culture for date/time parsing: {CultureName}", arabicCulture.Name);
-
-                for (int row = headerRow + 1; row <= totalRows; row++)
-                {
-                    try
-                    {
-                        var tripNumber = sheet.Cells[row, headers[ColTripNumber]].Text?.Trim();
-                        var carPlate = sheet.Cells[row, headers[ColCarPlate]].Text?.Trim();
-
-                        if (string.IsNullOrWhiteSpace(tripNumber) || string.IsNullOrWhiteSpace(carPlate))
-                        {
-                            _logger.LogTrace("Skipping row {Row}: TripNumber or CarPlate is empty", row);
-                            skippedRows++;
-                            continue;
-                        }
-
-                        _logger.LogDebug("Processing row {Row}: TripNumber={TripNumber}, CarPlate={CarPlate}",
-                            row, tripNumber, carPlate);
-
-                        // 1. Parse Amount
-                        decimal amount = 0;
-                        if (headers.TryGetValue(ColAmount, out int amountCol))
-                        {
-                            var amountRaw = sheet.Cells[row, amountCol].Text?.Trim();
-                            if (!string.IsNullOrWhiteSpace(amountRaw))
-                            {
-                                var cleanedAmount = amountRaw.Replace(",", "").Trim();
-                                if (decimal.TryParse(cleanedAmount, NumberStyles.Any, CultureInfo.InvariantCulture, out var parsedAmount))
-                                {
-                                    amount = parsedAmount;
-                                    _logger.LogTrace("Row {Row}: Parsed amount = {Amount}", row, amount);
-                                }
-                                else
-                                {
-                                    _logger.LogWarning("Row {Row}: Failed to parse amount from '{AmountRaw}'", row, amountRaw);
-                                }
-                            }
-                        }
-
-                        // 2. Parse Date and Time (The critical fix)
-                        DateTime? fullTripDate = null;
-                        if (headers.TryGetValue(ColDate, out int dateCol))
-                        {
-                            var dateText = sheet.Cells[row, dateCol].Text?.Trim();
-                            var timeText = headers.TryGetValue(ColTime, out int timeCol)
-                                           ? sheet.Cells[row, timeCol].Text?.Trim() : "";
-
-                            _logger.LogTrace("Row {Row}: Date text='{DateText}', Time text='{TimeText}'",
-                                row, dateText, timeText);
-
-                            if (!string.IsNullOrEmpty(dateText))
-                            {
-                                // Combine Date (19أبريل2026) and Time (02:40:50م)
-                                string combinedDateTime = $"{dateText} {timeText}".Trim();
-
-                                // Try to parse using the Arabic culture
-                                if (DateTime.TryParse(combinedDateTime, arabicCulture, DateTimeStyles.None, out var parsed))
-                                {
-                                    fullTripDate = parsed;
-                                    _logger.LogTrace("Row {Row}: Successfully parsed combined date/time = {DateTime}",
-                                        row, fullTripDate);
-                                }
-                                else if (DateTime.TryParse(dateText, arabicCulture, DateTimeStyles.None, out var onlyDate))
-                                {
-                                    // Fallback to date only if time parsing fails
-                                    fullTripDate = onlyDate;
-                                    _logger.LogWarning("Row {Row}: Only date parsed successfully, time parsing failed. Date = {Date}",
-                                        row, fullTripDate);
-                                }
-                                else
-                                {
-                                    _logger.LogWarning("Row {Row}: Failed to parse date from '{DateText}'", row, dateText);
-                                }
-                            }
-                        }
-
-                        // 3. Parse Gate and Direction
-                        string? gate = headers.TryGetValue(ColGate, out int gateCol)
-                            ? sheet.Cells[row, gateCol].Text?.Trim() : null;
-
-                        string? direction = headers.TryGetValue(ColDirection, out int dirCol)
-                            ? sheet.Cells[row, dirCol].Text?.Trim() : null;
-
-                        _logger.LogDebug("Row {Row}: Gate={Gate}, Direction={Direction}, TripDate={TripDate}",
-                            row, gate ?? "null", direction ?? "null", fullTripDate?.ToString("yyyy-MM-dd HH:mm:ss") ?? "null");
-
-                        results.Add(new EntranceFeeRowData
-                        {
-                            TripNumber = tripNumber,
-                            CarPlate = carPlate,
-                            Amount = amount,
-                            GateName = gate,
-                            Direction = direction,
-                            TripDate = fullTripDate
-                        });
-
-                        processedRows++;
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Error processing row {Row} in Excel file {FileName}", row, file.FileName);
-                        errorRows++;
-                        // Continue processing other rows
-                    }
-                }
-
-                _logger.LogInformation(
-                    "Excel parsing completed for {FileName}. " +
-                    "Total rows processed: {ProcessedRows}, " +
-                    "Skipped rows: {SkippedRows}, " +
-                    "Error rows: {ErrorRows}, " +
-                    "Valid entries: {ValidEntries}",
-                    file.FileName,
-                    (totalRows - headerRow),
-                    skippedRows,
-                    errorRows,
-                    results.Count);
-
-                if (results.Count == 0)
-                {
-                    _logger.LogWarning("No valid data rows were parsed from Excel file {FileName}", file.FileName);
-                    throw new InvalidOperationException("No valid data found in the Excel file. Please check the file format.");
-                }
-
-                return results;
+                return new DateTime(year, monthNum, day, hour, minute, second, DateTimeKind.Unspecified);
             }
-            catch (InvalidOperationException)
-            {
-                // Re-throw our custom exceptions
-                throw;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Unexpected error while parsing Excel file {FileName}", file.FileName);
-                throw new InvalidOperationException("An error occurred while parsing the Excel file. Please ensure the file is in the correct format and try again.", ex);
-            }
+
+            return null;
         }
     }
+
 }

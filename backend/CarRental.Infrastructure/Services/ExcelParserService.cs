@@ -1,7 +1,13 @@
 using CarRental.Application.Common;
+using CarRental.Application.DTOs;
 using CarRental.Application.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Microsoft.VisualBasic;
+using MimeKit.Utils;
+using NPOI.HSSF.UserModel;
+using NPOI.SS.UserModel;
+using NPOI.XSSF.UserModel;
 using OfficeOpenXml;
 using System.Globalization;
 
@@ -26,6 +32,172 @@ public class ExcelParserService : IExcelParserService
         _logger.LogInformation("ExcelParserService initialized for parsing fines Excel files");
     }
 
+    public async Task<List<EntranceFeeRowDto>> ParseEntranceFeesExcelAsync(IFormFile file)
+    {
+        await using var memStream = new MemoryStream();
+        await file.CopyToAsync(memStream);
+        memStream.Position = 0;
+
+        // Detect real format by magic bytes — NOT the file extension.
+        // Files arrive as .xls but may be Office 2007+ XLSX (PK zip, 50 4B)
+        // or true legacy binary XLS (CFBF, D0 CF 11 E0).
+        var magic = new byte[4];
+        int bytesRead = await memStream.ReadAsync(magic, 0, 4);
+        if (bytesRead < 4)
+            throw new InvalidOperationException("File is too small to be a valid Excel file.");
+        memStream.Position = 0;
+
+        bool isXlsx = magic[0] == 0x50 && magic[1] == 0x4B; // PK zip signature
+
+        IWorkbook workbook = isXlsx
+            ? new XSSFWorkbook(memStream)
+            : (IWorkbook)new HSSFWorkbook(memStream);
+
+        var sheet = workbook.GetSheetAt(0)
+            ?? throw new InvalidOperationException("The Excel file contains no sheets.");
+
+        // Column layout (0-based):
+        // col 1  → Amount       (المبلغ)
+        // col 2  → CarPlate     (اللوحة)
+        // col 4  → Direction    (إتجاه العبور)
+        // col 9  → GateName     (بوابة العبور)
+        // col 12 → TripTime     (وقت الرحلة)
+        // col 13 → TripDate     (تاريخ الرحلة)
+        // col 15 → TripNumber   (رقم الرحلة)
+
+        // Find header row dynamically by looking for "رقم الرحلة" in col 15
+        int headerRowIndex = -1;
+        for (int i = 0; i <= Math.Min(sheet.LastRowNum, 30); i++)
+        {
+            var r = sheet.GetRow(i);
+            if (r == null) continue;
+            var cell = r.GetCell(15);
+            if (cell != null && cell.ToString()?.Trim() == "رقم الرحلة")
+            {
+                headerRowIndex = i;
+                break;
+            }
+        }
+
+        if (headerRowIndex == -1)
+            throw new InvalidOperationException(
+                "Could not locate the header row. Expected a column labelled 'رقم الرحلة' in the first 30 rows.");
+
+        var rows = new List<EntranceFeeRowDto>();
+
+        for (int i = headerRowIndex + 1; i <= sheet.LastRowNum; i++)
+        {
+            var row = sheet.GetRow(i);
+            if (row == null) continue;
+
+            var tripNumber = GetCellString(row, 15);
+            var carPlate = GetCellString(row, 2);
+
+            // Skip blank rows and the totals summary row at the end
+            // (summary row: col2 = ":(المبلغ (درهم إماراتي", col4 = ":مجموع الرحلات")
+            if (string.IsNullOrWhiteSpace(tripNumber)) continue;
+            if (string.IsNullOrWhiteSpace(carPlate)) continue;
+            if (carPlate.Contains(':') || tripNumber.Contains(':')) continue;
+
+            var amountStr = GetCellString(row, 1);
+            var gateName = GetCellString(row, 9);
+            var direction = GetCellString(row, 4);
+            var tripDateStr = GetCellString(row, 13);
+            var tripTimeStr = GetCellString(row, 12);
+
+            if (!decimal.TryParse(amountStr, out var amount))
+                continue;
+
+            rows.Add(new EntranceFeeRowDto(
+               TripNumber: tripNumber.Trim(),
+               CarPlate: carPlate.Trim(),
+               Amount: amount,
+               GateName: gateName?.Trim(),
+               Direction: direction?.Trim(),
+               TripDate: ParseArabicDate(tripDateStr, tripTimeStr)
+           ));
+        }
+
+        return rows;
+    }
+
+    private static string? GetCellString(IRow row, int colIndex)
+    {
+        var cell = row.GetCell(colIndex);
+        if (cell == null) return null;
+
+        return cell.CellType switch
+        {
+            CellType.Numeric => DateUtil.IsCellDateFormatted(cell)
+                ? (cell.DateCellValue?.ToString("dd/MM/yyyy") ?? string.Empty)
+                : cell.NumericCellValue.ToString(CultureInfo.InvariantCulture),
+            CellType.String => cell.StringCellValue,
+            CellType.Formula => cell.CachedFormulaResultType == CellType.Numeric
+                ? cell.NumericCellValue.ToString(CultureInfo.InvariantCulture)
+                : cell.StringCellValue,
+            _ => cell.ToString()
+        };
+    }
+
+    /// <summary>
+    /// Parses Arabic date strings from the Dubai RTA portal.
+    /// Format: "19أبريل2026", "31مايو2026" — optionally with time "02:40:50م" (م=PM, ص=AM).
+    /// </summary>
+    private static DateTime? ParseArabicDate(string? dateStr, string? timeStr = null)
+    {
+        if (string.IsNullOrWhiteSpace(dateStr)) return null;
+
+        var months = new Dictionary<string, int>(StringComparer.Ordinal)
+        {
+            ["يناير"] = 1,
+            ["فبراير"] = 2,
+            ["مارس"] = 3,
+            ["أبريل"] = 4,
+            ["مايو"] = 5,
+            ["يونيو"] = 6,
+            ["يوليو"] = 7,
+            ["أغسطس"] = 8,
+            ["سبتمبر"] = 9,
+            ["أكتوبر"] = 10,
+            ["نوفمبر"] = 11,
+            ["ديسمبر"] = 12
+        };
+
+        foreach (var (arabicName, monthNum) in months)
+        {
+            int idx = dateStr.IndexOf(arabicName, StringComparison.Ordinal);
+            if (idx < 0) continue;
+
+            var dayStr = dateStr[..idx];
+            var yearStr = dateStr[(idx + arabicName.Length)..];
+
+            if (!int.TryParse(dayStr, out int day)) return null;
+            if (!int.TryParse(yearStr, out int year)) return null;
+
+            int hour = 0, minute = 0, second = 0;
+
+            if (!string.IsNullOrWhiteSpace(timeStr))
+            {
+                bool isPm = timeStr.Contains('م');
+                var timePart = timeStr.Replace("م", "").Replace("ص", "").Trim();
+
+                if (TimeSpan.TryParse(timePart, out var ts))
+                {
+                    hour = ts.Hours;
+                    minute = ts.Minutes;
+                    second = ts.Seconds;
+
+                    if (isPm && hour < 12) hour += 12;
+                    if (!isPm && hour == 12) hour = 0;
+                }
+            }
+
+            return new DateTime(year, monthNum, day, hour, minute, second, DateTimeKind.Unspecified);
+        }
+
+        return null;
+    }
+    
     public async Task<List<FineRowData>> ParseFinesExcelAsync(IFormFile file)
     {
         if (file == null)

@@ -145,59 +145,73 @@ dateRangeValidator(group: FormGroup) {
 }
 
   // ── Watch both dates and regenerate schedule ─────────────────────────
-  private watchDatesForSchedule() {
-    combineLatest([
-      this.form.get('joinDate')!.valueChanges,
-      this.form.get('contractExpiry')!.valueChanges
-    ])
-    .pipe(takeUntil(this.destroy$))
-    .subscribe(([join, expiry]) => {
-      this.generatePaymentRows(join, expiry);
-    });
-  }
+private watchDatesForSchedule() {
+  combineLatest([
+    this.form.get('dateOfPayment')!.valueChanges,
+    this.form.get('contractExpiry')!.valueChanges
+  ])
+  .pipe(takeUntil(this.destroy$))
+  .subscribe(([paymentDate, expiry]) => {
+    this.generatePaymentRows(paymentDate, expiry);
+  });
+}
 
-  generatePaymentRows(joinRaw: string | null, expiryRaw: string | null) {
-    if (!joinRaw || !expiryRaw) {
-      this.paymentRows = [];
-      return;
-    }
-
-    const join   = new Date(joinRaw);
-    const expiry = new Date(expiryRaw);
-
-   if (
-  isNaN(join.getTime()) ||
-  isNaN(expiry.getTime()) ||
-  join > expiry
+generatePaymentRows(
+  paymentDateRaw: string | null,
+  expiryRaw: string | null
 ) {
-      this.paymentRows = [];
-      return;
-    }
-
-    // Preserve existing amounts when re-generating (e.g. user fixes a date)
-    const existingAmounts = new Map(
-      this.paymentRows.map(r => [`${r.year}-${r.month}`, r.amount])
-    );
-
-    const rows: PaymentRow[] = [];
-    const cur = new Date(join.getFullYear(), join.getMonth(), 1);
-    const end = new Date(expiry.getFullYear(), expiry.getMonth(), 1);
-
-    while (cur <= end) {
-      const m = cur.getMonth() + 1;
-      const y = cur.getFullYear();
-      rows.push({
-        month:      m,
-        year:       y,
-        monthLabel: `${MONTH_NAMES[m - 1]} ${y}`,
-        amount:     existingAmounts.get(`${y}-${m}`) ?? 0,
-        isPaid:     false
-      });
-      cur.setMonth(cur.getMonth() + 1);
-    }
-
-    this.paymentRows = rows;
+  if (!paymentDateRaw || !expiryRaw) {
+    this.paymentRows = [];
+    return;
   }
+
+  const paymentDate = new Date(paymentDateRaw);
+  const expiry = new Date(expiryRaw);
+
+  if (
+    isNaN(paymentDate.getTime()) ||
+    isNaN(expiry.getTime()) ||
+    paymentDate > expiry
+  ) {
+    this.paymentRows = [];
+    return;
+  }
+
+  const existingAmounts = new Map(
+    this.paymentRows.map(r => [`${r.year}-${r.month}`, r.amount])
+  );
+
+  const rows: PaymentRow[] = [];
+
+  const cur = new Date(
+    paymentDate.getFullYear(),
+    paymentDate.getMonth(),
+    1
+  );
+
+  const end = new Date(
+    expiry.getFullYear(),
+    expiry.getMonth(),
+    1
+  );
+
+  while (cur <= end) {
+    const m = cur.getMonth() + 1;
+    const y = cur.getFullYear();
+
+    rows.push({
+      month: m,
+      year: y,
+      monthLabel: `${MONTH_NAMES[m - 1]} ${y}`,
+      amount: existingAmounts.get(`${y}-${m}`) ?? 0,
+      isPaid: false
+    });
+
+    cur.setMonth(cur.getMonth() + 1);
+  }
+
+  this.paymentRows = rows;
+}
 
   // ─────────────────────────────────────────────────────────────────────
   addDocument() {
@@ -256,17 +270,17 @@ this.paymentRows = parsed.map(p => ({
 }));
         } catch {
           // Malformed JSON — fall back to generating from dates
-          this.generatePaymentRows(
-            data.joinDate?.toString().split('T')[0] ?? null,
-            data.contractExpiry?.toString().split('T')[0] ?? null
-          );
+this.generatePaymentRows(
+  data.dateOfPayment?.toString().split('T')[0] ?? null,
+  data.contractExpiry?.toString().split('T')[0] ?? null
+);
         }
       } else {
         // No schedule saved yet — generate empty rows from the date range
-        this.generatePaymentRows(
-          data.joinDate?.toString().split('T')[0] ?? null,
-          data.contractExpiry?.toString().split('T')[0] ?? null
-        );
+  this.generatePaymentRows(
+  data.dateOfPayment?.toString().split('T')[0] ?? null,
+  data.contractExpiry?.toString().split('T')[0] ?? null
+);
       }
 
       // ── Documents ──────────────────────────────────────────────────

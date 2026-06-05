@@ -15,6 +15,7 @@ namespace CarRental.API.Controllers
     {
         private readonly IMonthlyRentalPaymentService _paymentService;
 
+
         public PaymentController(IMonthlyRentalPaymentService paymentService)
         {
             _paymentService = paymentService;
@@ -30,6 +31,8 @@ namespace CarRental.API.Controllers
                 ? Ok(result)
                 : BadRequest(result);
         }
+
+  
 
 
         [HttpPut("{id}")]

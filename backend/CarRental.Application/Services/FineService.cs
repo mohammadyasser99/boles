@@ -47,8 +47,10 @@ public class FineService : IFineService
             throw new ArgumentNullException(nameof(file), "Excel file cannot be null");
         }
 
-        _logger.LogInformation("Starting fine import from Excel file: {FileName}, Size: {Size} bytes",
-            file.FileName, file.Length);
+        _logger.LogInformation(
+            "Starting fine import from Excel file: {FileName}, Size: {Size} bytes",
+            file.FileName,
+            file.Length);
 
         await using var transaction = await _unitOfWork.BeginTransactionAsync();
 
@@ -56,29 +58,42 @@ public class FineService : IFineService
         {
             _logger.LogDebug("Parsing Excel file...");
             var rows = await _excelParser.ParseFinesExcelAsync(file);
-            _logger.LogInformation("Parsed {RowCount} rows from Excel file", rows.Count);
 
-            // Filter out rows with missing required fields
+            _logger.LogInformation(
+                "Parsed {RowCount} rows from Excel file",
+                rows.Count);
+
             var validRows = rows
-                .Where(r => !string.IsNullOrWhiteSpace(r.ViolationNumber)
-                         && !string.IsNullOrWhiteSpace(r.CarPlate))
+                .Where(r =>
+                    !string.IsNullOrWhiteSpace(r.ViolationNumber) &&
+                    !string.IsNullOrWhiteSpace(r.CarPlate))
                 .ToList();
 
             var invalidRowsCount = rows.Count - validRows.Count;
+
             if (invalidRowsCount > 0)
             {
-                _logger.LogWarning("Skipped {InvalidCount} rows due to missing ViolationNumber or CarPlate", invalidRowsCount);
+                _logger.LogWarning(
+                    "Skipped {InvalidCount} rows due to missing ViolationNumber or CarPlate",
+                    invalidRowsCount);
             }
 
-            var incomingNumbers = validRows.Select(r => r.ViolationNumber).Distinct().ToList();
-            _logger.LogDebug("Found {UniqueViolations} unique violation numbers in the file", incomingNumbers.Count);
+            var incomingNumbers = validRows
+                .Select(r => r.ViolationNumber)
+                .Distinct()
+                .ToList();
 
-            // Check for existing violations
+            _logger.LogDebug(
+                "Found {UniqueViolations} unique violation numbers in the file",
+                incomingNumbers.Count);
+
             var existingNumbers = (await _fineRepository
                 .GetExistingViolationNumbersAsync(incomingNumbers))
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-            _logger.LogDebug("Found {ExistingCount} existing violation numbers in database", existingNumbers.Count);
+            _logger.LogDebug(
+                "Found {ExistingCount} existing violation numbers in database",
+                existingNumbers.Count);
 
             var newRows = validRows
                 .Where(r => !existingNumbers.Contains(r.ViolationNumber))
@@ -87,46 +102,50 @@ public class FineService : IFineService
                 .ToList();
 
             var duplicatesSkipped = validRows.Count - newRows.Count;
-            _logger.LogInformation("After deduplication: {NewRowsCount} new fines to import, {DuplicatesSkipped} duplicates skipped",
-                newRows.Count, duplicatesSkipped);
 
-            var carSummaries = new List<CarFinesSummaryDto>();
+            _logger.LogInformation(
+                "After deduplication: {NewRowsCount} new fines to import, {DuplicatesSkipped} duplicates skipped",
+                newRows.Count,
+                duplicatesSkipped);
 
             if (newRows.Any())
             {
-                // Step 1: Create all missing Car records FIRST
-                var affectedPlates = newRows.Select(r => r.CarPlate).Distinct().ToList();
-                _logger.LogDebug("Creating missing car records for plates: {Plates}", string.Join(", ", affectedPlates));
+                // Load all affected cars with their clients
+                var affectedPlates = newRows
+                    .Select(r => r.CarPlate)
+                    .Distinct()
+                    .ToList();
 
-                var carsAdded = 0;
-                foreach (var plate in affectedPlates)
-                {
-                    var existing = await _carRepository.GetAll()
-                        .Where(x => x.CarPlate == plate)
-                        .FirstOrDefaultAsync();
+                var cars = await _carRepository
+                    .GetAll()
+                    .Include(c => c.Client)
+                    .Where(c => affectedPlates.Contains(c.CarPlate))
+                    .ToDictionaryAsync(c => c.CarPlate);
 
-                    if (existing == null)
-                    {
-                        await _carRepository.AddAsync(new Car { CarPlate = plate });
-                        carsAdded++;
-                        _logger.LogDebug("Added new car record for plate: {CarPlate}", plate);
-                    }
-                    else
-                    {
-                        _logger.LogTrace("Car record already exists for plate: {CarPlate}", plate);
-                    }
-                }
-
-                if (carsAdded > 0)
-                {
-                    _logger.LogInformation("Added {CarsAdded} new car records", carsAdded);
-                    await _carRepository.SaveChanges();
-                }
-
-                // Step 2: Insert fines
                 var finesToAdd = new List<Fine>();
+
                 foreach (var row in newRows)
                 {
+                    if (!cars.TryGetValue(row.CarPlate, out var car))
+                    {
+                        _logger.LogWarning(
+                            "Car {CarPlate} does not exist. Violation {ViolationNumber} skipped.",
+                            row.CarPlate,
+                            row.ViolationNumber);
+
+                        continue;
+                    }
+
+                    if (car.Client == null)
+                    {
+                        _logger.LogWarning(
+                            "Car {CarPlate} is not assigned to a client. Violation {ViolationNumber} skipped.",
+                            row.CarPlate,
+                            row.ViolationNumber);
+
+                        continue;
+                    }
+
                     finesToAdd.Add(new Fine
                     {
                         Id = Guid.NewGuid(),
@@ -138,21 +157,30 @@ public class FineService : IFineService
                         ImportedAt = DateTime.UtcNow
                     });
 
-                    _logger.LogTrace("Preparing fine: ViolationNumber={ViolationNumber}, CarPlate={CarPlate}, Amount={Amount}",
-                        row.ViolationNumber, row.CarPlate, row.Amount);
+                    _logger.LogTrace(
+                        "Preparing fine: ViolationNumber={ViolationNumber}, CarPlate={CarPlate}, Amount={Amount}",
+                        row.ViolationNumber,
+                        row.CarPlate,
+                        row.Amount);
                 }
 
                 if (finesToAdd.Any())
                 {
                     await _fineRepository.AddRangeAsync(finesToAdd);
-                    await _fineRepository.SaveChanges();
-                    _logger.LogInformation("Successfully added {FineCount} new fines to database", finesToAdd.Count);
+                    await _unitOfWork.SaveChangesAsync();
+
+                    _logger.LogInformation(
+                        "Successfully added {FineCount} new fines to database",
+                        finesToAdd.Count);
                 }
 
                 await _unitOfWork.CommitAsync();
 
-                _logger.LogInformation("Fine import completed successfully. Total processed: {TotalProcessed}, New: {NewFines}, Duplicates: {Duplicates}",
-                    rows.Count, finesToAdd.Count, duplicatesSkipped + invalidRowsCount);
+                _logger.LogInformation(
+                    "Fine import completed successfully. Total processed: {TotalProcessed}, New: {NewFines}, Duplicates: {Duplicates}",
+                    rows.Count,
+                    finesToAdd.Count,
+                    duplicatesSkipped + invalidRowsCount);
 
                 return new FineImportResultDto(
                     TotalRowsProcessed: rows.Count,
@@ -160,38 +188,58 @@ public class FineService : IFineService
                     DuplicatesSkipped: duplicatesSkipped + invalidRowsCount
                 );
             }
-            else
-            {
-                _logger.LogWarning("No new fines to import. All violations already exist in the database.");
-                await _unitOfWork.CommitAsync();
 
-                return new FineImportResultDto(
-                    TotalRowsProcessed: rows.Count,
-                    NewFinesAdded: 0,
-                    DuplicatesSkipped: rows.Count
-                );
-            }
+            _logger.LogWarning(
+                "No new fines to import. All violations already exist in the database.");
+
+            await _unitOfWork.CommitAsync();
+
+            return new FineImportResultDto(
+                TotalRowsProcessed: rows.Count,
+                NewFinesAdded: 0,
+                DuplicatesSkipped: rows.Count
+            );
         }
         catch (InvalidOperationException ex)
         {
-            _logger.LogError(ex, "Excel parsing error during fine import for file: {FileName}", file.FileName);
+            _logger.LogError(
+                ex,
+                "Excel parsing error during fine import for file: {FileName}",
+                file.FileName);
+
             await _unitOfWork.RollbackAsync();
-            throw new InvalidOperationException($"Excel parsing failed: {ex.Message}", ex);
+
+            throw new InvalidOperationException(
+                $"Excel parsing failed: {ex.Message}",
+                ex);
         }
         catch (DbUpdateException ex)
         {
-            _logger.LogError(ex, "Database error during fine import for file: {FileName}", file.FileName);
+            _logger.LogError(
+                ex,
+                "Database error during fine import for file: {FileName}",
+                file.FileName);
+
             await _unitOfWork.RollbackAsync();
-            throw new InvalidOperationException("Database error occurred while importing fines. Please check the data format and try again.", ex);
+
+            throw new InvalidOperationException(
+                "Database error occurred while importing fines. Please check the data format and try again.",
+                ex);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unexpected error during fine import for file: {FileName}", file.FileName);
+            _logger.LogError(
+                ex,
+                "Unexpected error during fine import for file: {FileName}",
+                file.FileName);
+
             await _unitOfWork.RollbackAsync();
-            throw new InvalidOperationException("An unexpected error occurred while importing fines. Please try again later.", ex);
+
+            throw new InvalidOperationException(
+                "An unexpected error occurred while importing fines. Please try again later.",
+                ex);
         }
     }
-
     public async Task<IEnumerable<CarDebtDto>> GetAllCarFinessAsync()
     {
         _logger.LogInformation("Retrieving all car fines summary");

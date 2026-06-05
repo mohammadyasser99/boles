@@ -1,9 +1,9 @@
 ﻿using CarRental.Domain.Enums;
 namespace CarRental.Application.DTOs
 {
-
+    public record ModifyBalanceRequestDto(decimal Amount, string Operation);
     public record CreateMonthlyRentalPaymentRequestDtos(Guid UserId, string CarPlate , decimal Amount , DateOnly PaidAt,
-            PaymentType PaymentType , string? ViolationNumber , string? TripNumber,DateTime? ViolationDate);
+            PaymentType PaymentType , string? ViolationNumber , string? TripNumber,DateTime? ViolationDate, bool UseBalance = false);
     public record CreateMonthlyRentalPaymentResponseDtos(Guid Id);
     // DTOs/CarMonthlyRowDto.cs  — RentalPrice is now per-row (from schedule JSON)
     public record CarMonthlyRowDto(

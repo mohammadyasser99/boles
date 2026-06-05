@@ -5,10 +5,10 @@
   <!-- Header -->
   <div class="flex items-center justify-between">
     <div>
-      <h1 class="font-display font-800 text-surface-800 text-2xl">Cars</h1>
-      <p class="text-surface-400 text-sm mt-1">Manage registered car plates</p>
+      <h1 class="font-display font-800 text-surface-800 text-2xl">السيارات</h1>
+      <p class="text-surface-400 text-sm mt-1">إدارة اللوحات المسجلة للسيارات</p>
     </div>
-    <button (click)="openCreate()" pButton label="Add Car" icon="pi pi-plus"
+    <button (click)="openCreate()" pButton label="اضافة سيارة" icon="pi pi-plus"
       class="!bg-brand-600 !border-brand-600 !font-display !font-700 !rounded-xl shadow-glow"></button>
   </div>
 
@@ -41,29 +41,29 @@
       <input
         pInputText
         [(ngModel)]="searchTerm"
-        [placeholder]="searchBy === 'carplate' ? 'Search plate...' : 'Search name...'"
+        [placeholder]="searchBy === 'carplate' ? 'بحث ب اللوحة...' : 'بحث ب الاسم...'"
         (keyup.enter)="search()"
         class="!pl-9 !rounded-xl !border-surface-200 w-full text-sm"
       />
     </div>
 
-    <button pButton icon="pi pi-search" label="Search" (click)="search()"
+    <button pButton icon="pi pi-search" label="بحث" (click)="search()"
       class="!rounded-xl !bg-brand-600 !border-brand-600"></button>
 
-    <button pButton icon="pi pi-times" label="Clear" severity="secondary" (click)="clearSearch()"
+    <button pButton icon="pi pi-times" label="مسح" severity="secondary" (click)="clearSearch()"
       class="!rounded-xl"></button>
 
-    <span class="text-xs text-surface-400 font-mono ml-auto">{{ totalRecords() }} cars</span>
+    <span class="text-xs text-surface-400 font-mono ml-auto">{{ totalRecords() }} سيارات</span>
   </div>
 </ng-template>
       <ng-template pTemplate="header">
         <tr>
-          <th>Car Plate</th>
-          <th>Assigned User</th>
-          <th>Rental Price (AED)</th>
-          <th>Total Debt (AED)</th>
-          <th>Status</th>
-          <th class="text-right">Actions</th>
+          <th>لوحة السيارة</th>
+          <th>المستخدم </th>
+          <th>سعر الإيجار (AED)</th>
+          <th>الديون الكلية (AED)</th>
+          <th>الحالة</th>
+          <th class="text-right">الإجراءات</th>
         </tr>
       </ng-template>
       <ng-template pTemplate="body" let-car>
@@ -82,7 +82,7 @@
               <span class="text-sm text-surface-700">{{ car.userName }}</span>
             </div>
             } @else {
-            <span class="text-surface-300 text-sm italic">Unassigned</span>
+            <span class="text-surface-300 text-sm italic">غير مسجل</span>
             }
           </td>
           <td>
@@ -102,13 +102,13 @@
           </td>
           <td>
             <div class="flex justify-end gap-1">
-              <button pButton icon="pi pi-link" pTooltip="Assign User" tooltipPosition="top"
+              <button pButton icon="pi pi-link" pTooltip="تخصيص عميل" tooltipPosition="top"
                 (click)="openAssign(car)"></button>
-              <button pButton icon="pi pi-dollar" pTooltip="Set Rental Price" tooltipPosition="top" severity="warning"
-                (click)="openRentalPrice(car)"></button>
+              <!-- <button pButton icon="pi pi-dollar" pTooltip="تخصيص سعر الإيجار" tooltipPosition="top" severity="warning"
+                (click)="openRentalPrice(car)"></button> -->
                 <button
                 pButton
-                label="Go To Details"
+                label="الذهاب للتفاصيل"
                 icon="pi pi-arrow-right"
                 tooltipPosition="top"
                 class="!bg-green-600 !border-green-600 !text-white"
@@ -122,7 +122,7 @@
       </ng-template>
       <ng-template pTemplate="emptymessage">
         <tr>
-          <td colspan="6" class="text-center text-surface-400 py-12 font-body">No cars registered yet.</td>
+          <td colspan="6" class="text-center text-surface-400 py-12 font-body">لا توجد سيارات مسجلة بعد.</td>
         </tr>
       </ng-template>
     </p-table>
@@ -130,20 +130,20 @@
 </div>
 
 <!-- Create Car Dialog -->
-<p-dialog header="Register New Car" [(visible)]="showCreate" [modal]="true" [style]="{width:'420px'}">
+<p-dialog header="تسجيل سيارة جديدة" [(visible)]="showCreate" [modal]="true" [style]="{width:'420px'}">
   <form [formGroup]="carForm" class="space-y-4 pt-2">
 
     <!-- Plate -->
     <div class="space-y-1.5">
       <label class="text-xs font-display font-600 text-surface-500 uppercase">
-        Car Plate *
+        لوحة السيارة *
       </label>
   
       <input pInputText formControlName="carPlate" class="w-full !rounded-xl" />
   
       <small class="text-red-500 text-xs"
              *ngIf="carForm.get('carPlate')?.touched && carForm.get('carPlate')?.invalid">
-        Car plate is required
+        لوحة السيارة مطلوبة ويجب أن تكون فريدة.
       </small>
     </div>
   
@@ -174,14 +174,14 @@
   
     <!-- Chassis -->
     <div class="space-y-1.5">
-      <label class="text-xs font-display font-600 text-surface-500 uppercase">Chassis Number</label>
+      <label class="text-xs font-display font-600 text-surface-500 uppercase">رقم الشاسيه</label>
       <input pInputText formControlName="chassisNumber" class="w-full !rounded-xl" />
     </div>
   
-    <!-- Rental Price -->
-    <div class="space-y-1.5">
+   
+    <!-- <div class="space-y-1.5">
       <label class="text-xs font-display font-600 text-surface-500 uppercase">
-        Rental Price (AED)
+         (AED)
       </label>
   
       <p-inputNumber 
@@ -190,14 +190,14 @@
         styleClass="w-full"
         inputStyleClass="w-full !rounded-xl">
       </p-inputNumber>
-    </div>
+    </div> -->
   
   </form>
   <ng-template pTemplate="footer">
     <button pButton label="Cancel" class="!p-button-text !rounded-xl" (click)="showCreate=false"></button>
     <button 
     pButton 
-    label="Register" 
+    label="تسجيل" 
     icon="pi pi-check" 
     [loading]="saving()" 
     [disabled]="carForm.invalid"
@@ -208,13 +208,13 @@
 </p-dialog>
 
 <!-- Assign User Dialog -->
-<p-dialog header="Assign Car to User" [(visible)]="showAssign" [modal]="true" [style]="{width:'420px'}">
+<p-dialog header="تعيين السيارة للمستخدم" [(visible)]="showAssign" [modal]="true" [style]="{width:'420px'}">
   <div class="space-y-4 pt-2">
     <div class="px-3 py-2 bg-brand-50 rounded-xl">
       <p class="text-xs text-brand-600 font-mono">Plate: <strong>{{ selectedCar()?.carPlate }}</strong></p>
     </div>
     <div class="space-y-1.5">
-      <label class="text-xs font-display font-600 text-surface-500 uppercase tracking-wider">Select User *</label>
+      <label class="text-xs font-display font-600 text-surface-500 uppercase tracking-wider">اختر عميل *</label>
 <p-dropdown
   [options]="userOptions()"
   [(ngModel)]="selectedUserId"
@@ -224,19 +224,18 @@
   styleClass="w-full"
   appendTo="body"
   [filter]="true"
-  filterPlaceholder="Search user..."
+  filterPlaceholder="بحث عميل..."
 />
     </div>
   </div>
   <ng-template pTemplate="footer">
-    <button pButton label="Cancel" class="!p-button-text !rounded-xl" (click)="showAssign=false"></button>
-    <button pButton label="Assign" icon="pi pi-check" [loading]="saving()"
+    <button pButton label="الغاء" class="!p-button-text !rounded-xl" (click)="showAssign=false"></button>
+    <button pButton label="تعيين" icon="pi pi-check" [loading]="saving()"
       class="!bg-brand-600 !border-brand-600 !rounded-xl !font-display !font-700" (click)="assignCar()"></button>
   </ng-template>
 </p-dialog>
 
-<!-- Rental Price Dialog -->
-<p-dialog header="Set Rental Price" [(visible)]="showRentalPrice" [modal]="true" [style]="{width:'380px'}">
+<!-- <p-dialog header="Set Rental Price" [(visible)]="showRentalPrice" [modal]="true" [style]="{width:'380px'}">
   <div class="space-y-4 pt-2">
     <div class="px-3 py-2 bg-green-50 rounded-xl">
       <p class="text-xs text-green-700 font-mono">Plate: <strong>{{ selectedCar()?.carPlate }}</strong></p>
@@ -253,4 +252,4 @@
     <button pButton label="Update" icon="pi pi-check" [loading]="saving()"
       class="!bg-green-600 !border-green-600 !rounded-xl !font-display !font-700" (click)="saveRentalPrice()"></button>
   </ng-template>
-</p-dialog>
+</p-dialog> -->

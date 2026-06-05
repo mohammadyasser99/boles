@@ -1,4 +1,5 @@
-﻿using CarRental.Application.DTOs;
+﻿using CarRental.Application.Common;
+using CarRental.Application.DTOs;
 using CarRental.Application.Interfaces;
 using CarRental.Domain.Entities;
 using CarRental.Domain.Enums;
@@ -6,6 +7,10 @@ using CarRental.Domain.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.VisualBasic;
+using MimeKit.Utils;
+using NPOI.SS.UserModel;
+using System.Globalization;
 
 namespace CarRental.Application.Services
 {
@@ -35,30 +40,24 @@ namespace CarRental.Application.Services
             _unitOfWork = unitOfWork;
             _paymentRepository = paymentRepository;
             _logger = logger;
-
-            _logger.LogInformation("EntranceFeeService initialized");
         }
+
+
 
         public async Task<EntranceFeeImportResultDto> ImportEntranceFeesFromExcelAsync(IFormFile file)
         {
             if (file == null)
-            {
-                _logger.LogError("ImportEntranceFeesFromExcelAsync failed: File is null");
                 throw new ArgumentNullException(nameof(file), "Excel file cannot be null");
-            }
 
-            _logger.LogInformation("Starting entrance fee import from Excel file: {FileName}, Size: {Size} bytes",
-                file.FileName, file.Length);
+            _logger.LogInformation("Starting entrance fee import: {FileName}, {Size} bytes", file.FileName, file.Length);
 
             await using var transaction = await _unitOfWork.BeginTransactionAsync();
 
             try
             {
-                _logger.LogDebug("Parsing Excel file...");
                 var rows = await _excelParser.ParseEntranceFeesExcelAsync(file);
-                _logger.LogInformation("Parsed {RowCount} rows from Excel file", rows.Count);
+                _logger.LogInformation("Parsed {RowCount} rows", rows.Count);
 
-                // Filter out rows with missing required fields
                 var validRows = rows
                     .Where(r => !string.IsNullOrWhiteSpace(r.TripNumber)
                              && !string.IsNullOrWhiteSpace(r.CarPlate))
@@ -66,19 +65,13 @@ namespace CarRental.Application.Services
 
                 var invalidRowsCount = rows.Count - validRows.Count;
                 if (invalidRowsCount > 0)
-                {
-                    _logger.LogWarning("Skipped {InvalidCount} rows due to missing TripNumber or CarPlate", invalidRowsCount);
-                }
+                    _logger.LogWarning("Skipped {Count} rows: missing TripNumber or CarPlate", invalidRowsCount);
 
                 var incomingTripNumbers = validRows.Select(r => r.TripNumber).Distinct().ToList();
-                _logger.LogDebug("Found {UniqueTrips} unique trip numbers in the file", incomingTripNumbers.Count);
 
-                // Check for existing entrance fees
                 var existingTripNumbers = (await _entranceFeeRepository
                     .GetExistingTripNumbersAsync(incomingTripNumbers))
                     .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-                _logger.LogDebug("Found {ExistingCount} existing trip numbers in database", existingTripNumbers.Count);
 
                 var newRows = validRows
                     .Where(r => !existingTripNumbers.Contains(r.TripNumber))
@@ -87,184 +80,108 @@ namespace CarRental.Application.Services
                     .ToList();
 
                 var duplicatesSkipped = validRows.Count - newRows.Count;
-                _logger.LogInformation("After deduplication: {NewRowsCount} new entrance fees to import, {DuplicatesSkipped} duplicates skipped",
-                    newRows.Count, duplicatesSkipped);
+                _logger.LogInformation("{NewCount} new rows, {DupCount} duplicates skipped", newRows.Count, duplicatesSkipped);
 
-                if (newRows.Any())
+                if (!newRows.Any())
                 {
-                    var affectedPlates = newRows.Select(r => r.CarPlate).Distinct().ToList();
-                    _logger.LogDebug("Affected car plates: {Plates}", string.Join(", ", affectedPlates));
+                    _logger.LogWarning("No new entrance fees to import.");
+                    await _unitOfWork.CommitAsync();
+                    return new EntranceFeeImportResultDto(rows.Count, 0, rows.Count);
+                }
 
-                    // Step 1: Ensure all car records exist BEFORE inserting fees (FK requirement)
-                    var carsAdded = 0;
-                    foreach (var plate in affectedPlates)
+                var feesToAdd = new List<EntranceFee>();
+                var paymentsCreated = 0;
+                var totalFromBalance = 0m;
+
+                foreach (var row in newRows)
+                {
+                    var car = await _carRepository
+                        .GetAll()
+                        .Include(x => x.Client)
+                        .FirstOrDefaultAsync(x => x.CarPlate == row.CarPlate);
+
+                    if (car == null)
                     {
-                        var existing = await _carRepository
-                            .GetAll()
-                            .Where(x => x.CarPlate == plate)
-                            .FirstOrDefaultAsync();
-
-                        if (existing == null)
-                        {
-                            await _carRepository.AddAsync(new Car { CarPlate = plate });
-                            carsAdded++;
-                            _logger.LogDebug("Added new car record for plate: {CarPlate}", plate);
-                        }
-                        else
-                        {
-                            _logger.LogTrace("Car record already exists for plate: {CarPlate}", plate);
-                        }
+                        _logger.LogWarning("Car {Plate} not found. Trip {Trip} skipped.", row.CarPlate, row.TripNumber);
+                        continue;
                     }
 
-                    if (carsAdded > 0)
+                    if (car.Client == null)
                     {
-                        _logger.LogInformation("Added {CarsAdded} new car records", carsAdded);
-                        await _carRepository.SaveChanges();
+                        _logger.LogWarning("Car {Plate} has no client. Trip {Trip} skipped.", row.CarPlate, row.TripNumber);
+                        continue;
                     }
 
-                    // Step 2: Insert entrance fees
-                    var feesToAdd = new List<EntranceFee>();
-                    var paymentsCreated = 0;
-                    var totalAmountFromBalance = 0m;
+                    decimal remaining = row.Amount;
+                    decimal paidAmount = 0;
+                    bool isPaid = false;
 
-                    foreach (var row in newRows)
+                    if (car.Client.Balance > 0)
                     {
-                        _logger.LogDebug("Processing entrance fee: TripNumber={TripNumber}, CarPlate={CarPlate}, Amount={Amount}",
-                            row.TripNumber, row.CarPlate, row.Amount);
+                        decimal fromBalance = Math.Min(car.Client.Balance, remaining);
+                        paidAmount = fromBalance;
+                        remaining -= fromBalance;
+                        car.Client.Balance -= fromBalance;
+                        isPaid = remaining <= 0;
+                        totalFromBalance += fromBalance;
 
-                        var car = await _carRepository
-                            .GetAll()
-                            .Include(x => x.Client)
-                            .FirstOrDefaultAsync(x => x.CarPlate == row.CarPlate);
-
-                        if (car == null)
-                        {
-                            _logger.LogWarning("Car not found for plate {CarPlate} when processing trip {TripNumber}. Skipping.",
-                                row.CarPlate, row.TripNumber);
-                            continue;
-                        }
-
-                        decimal amount = row.Amount;
-                        decimal paidAmount = 0;
-                        bool isPaid = false;
-
-                        // Pay from user balance if available
-                        if (car.Client != null && car.Client.Balance > 0)
-                        {
-                            decimal amountFromBalance = Math.Min(car.Client.Balance, amount);
-
-                            if (amountFromBalance > 0)
-                            {
-                                paidAmount = amountFromBalance;
-                                amount -= amountFromBalance;
-                                car.Client.Balance -= amountFromBalance;
-                                isPaid = amount <= 0;
-                                totalAmountFromBalance += amountFromBalance;
-
-                                _logger.LogDebug("Paid {AmountFromBalance} from client balance for trip {TripNumber}. Remaining: {Remaining}, IsPaid: {IsPaid}",
-                                    amountFromBalance, row.TripNumber, amount, isPaid);
-
-                                // Create payment record
-                                var payment = new Payment
-                                {
-                                    Id = Guid.NewGuid(),
-                                    Amount = amountFromBalance,
-                                    PaidAt = row.TripDate.HasValue
-                                        ? DateOnly.FromDateTime(row.TripDate.Value)
-                                        : DateOnly.FromDateTime(DateTime.UtcNow),
-                                    Car = car,
-                                    User = car.Client,
-                                    PaymentType = PaymentType.EntranceFees,
-                                    TripNumber = row.TripNumber
-                                };
-
-                                await _paymentRepository.AddAsync(payment);
-                                paymentsCreated++;
-                                _logger.LogTrace("Payment record created for trip {TripNumber}: PaymentId={PaymentId}, Amount={Amount}",
-                                    row.TripNumber, payment.Id, amountFromBalance);
-                            }
-                        }
-                        else
-                        {
-                            _logger.LogTrace("No client balance available for car {CarPlate} to pay trip {TripNumber}",
-                                row.CarPlate, row.TripNumber);
-                        }
-
-                        var fee = new EntranceFee
+                        await _paymentRepository.AddAsync(new Payment
                         {
                             Id = Guid.NewGuid(),
-                            TripNumber = row.TripNumber,
-                            CarPlate = row.CarPlate,
-                            Amount = row.Amount,
-                            PaidAmount = paidAmount,
-                            IsPaid = isPaid,
-                            GateName = row.GateName,
-                            Direction = row.Direction,
-                            TripDate = row.TripDate,
-                            ImportedAt = DateTime.UtcNow
-                        };
-
-                        feesToAdd.Add(fee);
-                        _logger.LogTrace("Prepared entrance fee record for trip {TripNumber}", row.TripNumber);
+                            Amount = fromBalance,
+                            PaidAt = row.TripDate.HasValue
+                                            ? DateOnly.FromDateTime(row.TripDate.Value)
+                                            : DateOnly.FromDateTime(DateTime.UtcNow),
+                            Car = car,
+                            User = car.Client,
+                            PaymentType = PaymentType.EntranceFees,
+                            TripNumber = row.TripNumber
+                        });
+                        paymentsCreated++;
                     }
 
-                    if (feesToAdd.Any())
+                    feesToAdd.Add(new EntranceFee
                     {
-                        await _entranceFeeRepository.AddRangeAsync(feesToAdd);
-                        _logger.LogInformation("Added {FeeCount} entrance fee records to database", feesToAdd.Count);
-                    }
-
-                    if (paymentsCreated > 0)
-                    {
-                        _logger.LogInformation("Created {PaymentCount} payment records totaling {TotalAmount} from client balances",
-                            paymentsCreated, totalAmountFromBalance);
-                    }
-
-                    // Step 3: Save changes and commit transaction
-                    await _unitOfWork.SaveChangesAsync();
-                    await _unitOfWork.CommitAsync();
-
-                    _logger.LogInformation("Entrance fee import completed successfully. Total processed: {TotalProcessed}, New: {NewFees}, Duplicates: {Duplicates}, Payments from balance: {PaymentsCount}",
-                        rows.Count, feesToAdd.Count, duplicatesSkipped + invalidRowsCount, paymentsCreated);
-
-                    return new EntranceFeeImportResultDto(
-                        TotalRowsProcessed: rows.Count,
-                        NewFeesAdded: feesToAdd.Count,
-                        DuplicatesSkipped: duplicatesSkipped + invalidRowsCount
-                    );
+                        Id = Guid.NewGuid(),
+                        TripNumber = row.TripNumber,
+                        CarPlate = row.CarPlate,
+                        Amount = row.Amount,
+                        PaidAmount = paidAmount,
+                        IsPaid = isPaid,
+                        GateName = row.GateName,
+                        Direction = row.Direction,
+                        TripDate = row.TripDate,
+                        ImportedAt = DateTime.UtcNow
+                    });
                 }
-                else
-                {
-                    _logger.LogWarning("No new entrance fees to import. All trips already exist in the database.");
-                    await _unitOfWork.CommitAsync();
 
-                    return new EntranceFeeImportResultDto(
-                        TotalRowsProcessed: rows.Count,
-                        NewFeesAdded: 0,
-                        DuplicatesSkipped: rows.Count
-                    );
-                }
+                if (feesToAdd.Any())
+                    await _entranceFeeRepository.AddRangeAsync(feesToAdd);
+
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitAsync();
+
+                _logger.LogInformation("Import done. Added {Added}, skipped {Skipped}, payments {Payments} totalling {Total}",
+                    feesToAdd.Count, duplicatesSkipped + invalidRowsCount, paymentsCreated, totalFromBalance);
+
+                return new EntranceFeeImportResultDto(rows.Count, feesToAdd.Count, duplicatesSkipped + invalidRowsCount);
             }
             catch (InvalidOperationException ex)
             {
-                _logger.LogError(ex, "Excel parsing error during entrance fee import for file: {FileName}", file.FileName);
                 await _unitOfWork.RollbackAsync();
                 throw new InvalidOperationException($"Excel parsing failed: {ex.Message}", ex);
             }
             catch (DbUpdateException ex)
             {
-                _logger.LogError(ex, "Database error during entrance fee import for file: {FileName}", file.FileName);
                 await _unitOfWork.RollbackAsync();
-                throw new InvalidOperationException("Database error occurred while importing entrance fees. Please check the data format and try again.", ex);
+                throw new InvalidOperationException("Database error while importing entrance fees.", ex);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unexpected error during entrance fee import for file: {FileName}", file.FileName);
                 await _unitOfWork.RollbackAsync();
-                throw new InvalidOperationException("An unexpected error occurred while importing entrance fees. Please try again later.", ex);
+                throw new InvalidOperationException("Unexpected error while importing entrance fees.", ex);
             }
         }
-
         public async Task MarkAsPaidAsync(string tripNumber)
         {
             if (string.IsNullOrWhiteSpace(tripNumber))

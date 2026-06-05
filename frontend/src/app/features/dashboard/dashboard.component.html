@@ -2,7 +2,7 @@
 
       <!-- Header -->
       <div>
-        <h1 class="font-display font-800 text-surface-800 text-2xl">Dashboard</h1>
+        <h1 class="font-display font-800 text-surface-800 text-2xl">لوحة التحكم</h1>
         <p class="text-surface-400 text-sm font-body mt-1">Overview of your fleet and finances</p>
       </div>
 
@@ -11,7 +11,7 @@
 
         <div class="stat-card-gradient rounded-2xl p-5 text-white shadow-glow">
           <div class="flex items-center justify-between mb-4">
-            <p class="font-display font-600 text-blue-200 text-xs uppercase tracking-widest">Total Debt (fines + fees)</p>
+            <p class="font-display font-600 text-blue-200 text-xs uppercase tracking-widest">مجموع المخالفات و سالك</p>
             <div class="w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center">
               <i class="pi pi-wallet text-sm"></i>
             </div>
@@ -20,13 +20,13 @@
             <div class="h-8 bg-white/10 rounded-lg animate-pulse"></div>
           } @else {
             <p class="font-display font-800 text-3xl">{{ totalDebt() | number:'1.0-0' }}</p>
-            <p class="text-blue-200/70 text-xs font-mono mt-1">AED outstanding</p>
+            <p class="text-blue-200/70 text-xs font-mono mt-1">AED </p>
           }
         </div>
 
         <div class="bg-white rounded-2xl p-5 shadow-card border border-surface-200">
           <div class="flex items-center justify-between mb-4">
-            <p class="font-display font-600 text-surface-400 text-xs uppercase tracking-widest">Total Payments</p>
+            <p class="font-display font-600 text-surface-400 text-xs uppercase tracking-widest">مجموع المدفوعات</p>
             <div class="w-8 h-8 bg-green-50 rounded-lg flex items-center justify-center">
               <i class="pi pi-dollar text-green-500 text-sm"></i>
             </div>
@@ -101,7 +101,7 @@
             <i class="pi pi-flag text-red-400 text-sm"></i>
           </div>
           <div>
-            <p class="font-display font-600 text-surface-700 text-sm">Unpaid Fines</p>
+            <p class="font-display font-600 text-surface-700 text-sm">المخالفات غير المدفوعة</p>
             <p class="text-surface-400 text-xs font-mono">{{ finesCount() }} violations</p>
           </div>
         </div>
@@ -118,7 +118,7 @@
             <i class="pi pi-map text-amber-400 text-sm"></i>
           </div>
           <div>
-            <p class="font-display font-600 text-surface-700 text-sm">Unpaid Entrance Fees</p>
+            <p class="font-display font-600 text-surface-700 text-sm">مجموع سالك غير المدفوع</p>
             <p class="text-surface-400 text-xs font-mono">{{ entranceFeesCount() }} trips</p>
           </div>
         </div>
@@ -135,7 +135,7 @@
             <i class="pi pi-car text-blue-400 text-sm"></i>
           </div>
           <div>
-            <p class="font-display font-600 text-surface-700 text-sm">Unpaid Rentals</p>
+            <p class="font-display font-600 text-surface-700 text-sm">مجموع الايجارات غير المدفوعة</p>
             <p class="text-surface-400 text-xs font-mono">From payment schedules</p>
           </div>
         </div>
@@ -149,7 +149,7 @@
 
     <!-- Total row -->
     <div class="mt-4 pt-4 border-t border-surface-200 flex justify-between items-center">
-      <p class="font-display font-600 text-surface-500 text-sm">Total Outstanding</p>
+      <p class="font-display font-600 text-surface-500 text-sm">المجموع</p>
       <p class="font-display font-800 text-xl text-red-500">
         {{ (totalFines() + totalEntranceFees() + totalUnpaidRentals()) | number:'1.0-0' }}
         <span class="text-surface-400 text-xs font-mono ml-1">AED</span>

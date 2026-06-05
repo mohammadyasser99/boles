@@ -80,6 +80,39 @@ namespace CarRental.Application.Services
 
                 _logger.LogDebug("Car found: {CarPlate}, Brand: {Brand}, Model: {Model}", car.CarPlate, car.Brand, car.Model);
 
+                // ── Balance payment shortcut ──────────────────────────────────────────────
+                if (request.UseBalance)
+                {
+                    if (user.Balance < request.Amount)
+                    {
+                        return ApiResponse<CreateMonthlyRentalPaymentResponseDtos>.Fail(
+                            $"Insufficient balance. Available: {user.Balance:F2}, Required: {request.Amount:F2}");
+                    }
+
+                    user.Balance -= request.Amount;
+
+                    var balancePayment = new Payment
+                    {
+                        Id = Guid.NewGuid(),
+                        Amount = request.Amount,
+                        PaidAt = request.PaidAt,
+                        Car = car,
+                        User = user,
+                        PaymentType = request.PaymentType,
+                        ViolationNumber = request.PaymentType == PaymentType.Fines ? request.ViolationNumber : null,
+                        TripNumber = request.PaymentType == PaymentType.EntranceFees ? request.TripNumber : null,
+                    };
+
+                    await _paymentRepository.AddAsync(balancePayment);
+                    await _unitOfWork.SaveChangesAsync();
+
+                    return ApiResponse<CreateMonthlyRentalPaymentResponseDtos>
+                        .Ok(new CreateMonthlyRentalPaymentResponseDtos(balancePayment.Id),
+                            $"Payment of {request.Amount:F2} deducted from balance. Remaining balance: {user.Balance:F2}");
+                }
+                // ── End balance payment shortcut ──────────────────────────────────────────
+
+
                 if (request.PaymentType == PaymentType.MonthlyRental)
                 {
                     _logger.LogDebug("Processing MonthlyRental payment");

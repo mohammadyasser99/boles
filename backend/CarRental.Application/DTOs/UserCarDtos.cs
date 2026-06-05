@@ -18,6 +18,15 @@ public record UserWithCarDto(
     decimal? DownPayment
 );
 
+public record UserCarLookupDto(
+    Guid UserId,
+    string UserName,
+    decimal Balance ,
+    List<CarLookupDto> Cars
+);
+public record CarLookupDto(
+    string CarPlate
+);
 public record CarDtoo(
     string CarPlate,
     string? Brand,
