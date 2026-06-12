@@ -804,13 +804,19 @@ namespace CarRental.Application.Services
                 var clients = await _userRepository.GetAll().ToListAsync();
                 var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
 
+                var now = DateTime.UtcNow;
+
                 var totalUnpaidRentals = clients
                     .Where(c => !string.IsNullOrEmpty(c.PaymentScheduleJson))
-                    .SelectMany(c =>
-                        JsonSerializer.Deserialize<List<PaymentScheduleItem>>(
-                            c.PaymentScheduleJson!, jsonOptions)
-                        ?? new List<PaymentScheduleItem>())
-                    .Sum(s => Math.Max(0m, s.Amount - (s.RentalPaid)));
+                    .SelectMany(c => {
+                        var payDay = c.DateOfPayment.HasValue ? c.DateOfPayment.Value.Day : 1;
+                        return (JsonSerializer.Deserialize<List<PaymentScheduleItem>>(
+                                    c.PaymentScheduleJson!, jsonOptions)
+                                ?? new List<PaymentScheduleItem>())
+                            .Where(s => new DateTime(s.Year, s.Month, Math.Min(payDay, DateTime.DaysInMonth(s.Year, s.Month))) <= now)
+                            .Select(s => (s.Amount, s.RentalPaid));
+                    })
+                    .Sum(s => Math.Max(0m, s.Amount - s.RentalPaid));
 
                 _logger.LogInformation("Total unpaid rentals: {TotalUnpaidRentals:C}", totalUnpaidRentals);
 

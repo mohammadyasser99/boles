@@ -5,7 +5,17 @@
 
       <!-- Top -->
       <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-
+<div class="flex justify-end mb-4">
+  <button
+    pButton
+    type="button"
+    icon="pi pi-download"
+    label="Download PDF"
+    class="p-button-outlined !rounded-xl"
+    [disabled]="loading() || !summary()"
+    (click)="downloadPdf()">
+  </button>
+</div>
         <div>
           <h2 class="text-2xl font-700 text-surface-900 flex items-center gap-2">
             {{ summary()?.brand | titlecase }}
@@ -158,22 +168,22 @@
     styleClass="p-datatable-sm mt-6"
     [scrollable]="true"
     scrollHeight="600px">
-  <ng-template pTemplate="header">
-    <tr class="text-xs uppercase tracking-wide text-surface-400 bg-surface-50">
-      <th class="text-left">Month</th>
-      <th class="text-center">Status</th>
-      <th class="text-left">Payment Date</th>
-      <th class="text-right">Rental Price</th>
-      <th class="text-right text-green-600">Rental Paid</th>
-      <th class="text-right text-orange-500">Fines Total</th>
-      <th class="text-right text-orange-400">Fines Paid</th>
-      <th class="text-right text-purple-500">Fees Total</th>
-      <th class="text-right text-purple-400">Fees Paid</th>
-      <th class="text-right text-red-500">Remaining</th>
-      <th class="text-left text-orange-400">Payment Due</th>
-      <th></th>
-    </tr>
-  </ng-template>
+ <ng-template pTemplate="header">
+  <tr class="text-xs uppercase tracking-wide text-surface-400 bg-surface-50">
+    <th class="text-left">Month</th>
+    <th class="text-center">Status</th>
+    <th class="text-left">Payment Date</th>
+    <th class="text-right">Rental Price</th>
+    <th class="text-right text-green-600">Rental Paid</th>
+    <th class="text-right text-orange-500">Fines Total</th>
+    <th class="text-right text-orange-400">Fines Paid</th>
+    <th class="text-right text-purple-500">Fees Total</th>
+    <th class="text-right text-purple-400">Fees Paid</th>
+    <th class="text-right text-red-500">Remaining</th>
+    <th class="text-left text-orange-400">Payment Due</th>
+    <th></th>
+  </tr>
+</ng-template>
 
   <ng-template pTemplate="body" let-row>
     <tr class="border-b border-surface-100 transition-colors hover:bg-surface-50/60"
@@ -200,6 +210,7 @@
       <!-- Payment date -->
       <td class="text-sm text-surface-500 py-3 px-4">
         {{ row.paymentDate ? (row.paymentDate | date:'dd MMM yyyy') : '—' }}
+        
       </td>
 
       <!-- Rental Price -->
@@ -250,7 +261,154 @@
       <span class="text-xs text-surface-400">{{ paymentDueDate(row) }}</span>
     }
   </td>
-
+<td class="py-3 px-4">
+      @if (!isFuture(row) && row.totalRemaining > 0) {
+        <button
+          pButton
+          type="button"
+          icon="pi pi-credit-card"
+          label="Pay"
+          class="p-button-sm p-button-outlined !rounded-xl"
+          (click)="openPayDialog(row)">
+        </button>
+      }
+    </td>
+  
     </tr>
   </ng-template>
   </p-table>
+
+
+<p-toast></p-toast>
+
+<p-dialog header="إضافة دفع" [(visible)]="showDialog" [modal]="true" [style]="{width:'450px'}">
+  <form [formGroup]="form" class="space-y-4 pt-2">
+
+    <!--Payment Method-->
+    <div class="space-y-1.5">
+      <label class="text-xs font-display font-600 text-surface-500 uppercase">
+        Payment Method *
+      </label>
+      <p-dropdown
+        [options]="paymentSourceOptions"
+        formControlName="paymentSource"
+        optionLabel="label"
+        optionValue="value"
+        placeholder="Select payment method"
+        appendTo="body"
+        class="w-full">
+      </p-dropdown>
+    </div>
+
+    @if (form.get('paymentSource')?.value === 'Balance') {
+      <div class="p-3 rounded-xl border"
+        [ngClass]="form.hasError('insufficientBalance')
+          ? 'bg-red-50 border-red-300'
+          : 'bg-green-50 border-green-200'">
+        <p class="text-sm" [ngClass]="form.hasError('insufficientBalance') ? 'text-red-600' : 'text-surface-600'">
+          Available Balance:
+          <b>{{ selectedBalance | number:'1.2-2' }} AED</b>
+        </p>
+        @if (form.hasError('insufficientBalance')) {
+          <p class="text-xs text-red-500 mt-1">
+            <i class="pi pi-exclamation-triangle mr-1"></i>
+            Amount exceeds available balance
+          </p>
+        }
+      </div>
+    }
+
+    <!-- Amount -->
+    <div class="space-y-1.5">
+      <label class="text-xs font-display font-600 text-surface-500 uppercase">Amount *</label>
+      <p-inputNumber
+        formControlName="amount"
+        [min]="0"
+        [minFractionDigits]="2"
+        styleClass="w-full"
+        inputStyleClass="w-full !rounded-xl">
+      </p-inputNumber>
+      <small class="text-red-500 text-xs"
+        *ngIf="form.get('amount')?.touched && form.get('amount')?.invalid">
+        Amount is required
+      </small>
+    </div>
+
+    <!-- Paid At -->
+    <div class="space-y-1.5">
+      <label class="text-xs font-display font-600 text-surface-500 uppercase">
+        Paid At *
+      </label>
+      <p-calendar
+        formControlName="paidAt"
+        dateFormat="dd/mm/yy"
+        [showIcon]="true"
+        [iconDisplay]="'input'"
+        appendTo="body"
+        inputStyleClass="w-full border border-surface-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500">
+      </p-calendar>
+      <small class="text-red-500 text-xs"
+        *ngIf="form.get('paidAt')?.touched && form.get('paidAt')?.invalid">
+        Paid date is required
+      </small>
+      <small
+  class="p-error"
+  *ngIf="form.hasError('invalidPaymentMonth') && form.touched"
+>
+  Payment date month must match the selected row month.
+</small>  
+    </div>
+
+    <!-- Payment Type -->
+    <div class="space-y-1.5">
+      <label class="text-xs font-display font-600 text-surface-500 uppercase">Payment Type *</label>
+      <p-dropdown
+        [options]="paymentTypeOptions"
+        formControlName="paymentType"
+        optionLabel="label"
+        optionValue="value"
+        placeholder="Select payment type"
+        appendTo="body"
+        class="w-full">
+      </p-dropdown>
+      <small class="text-red-500 text-xs"
+        *ngIf="form.get('paymentType')?.touched && form.get('paymentType')?.invalid">
+        Payment type is required
+      </small>
+      
+    </div>
+
+    <!-- Fine (only for Fines Payment) -->
+    @if (form.get('paymentType')?.value === 2) {
+      <div class="space-y-1.5">
+        <label class="text-xs font-display font-600 text-surface-500 uppercase">Fine *</label>
+        <p-dropdown
+          [options]="fineOptions()"
+          formControlName="violationNumber"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Select fine"
+          appendTo="body"
+          class="w-full">
+        </p-dropdown>
+        <small class="text-surface-400 text-xs" *ngIf="fineOptions().length === 0">
+          No fines found for this car.
+        </small>
+      </div>
+    }
+
+  </form>
+
+  <ng-template pTemplate="footer">
+    <button pButton label="Cancel" class="!p-button-text !rounded-xl" (click)="showDialog=false"></button>
+    <button
+      pButton
+      label="Create"
+      icon="pi pi-check"
+      [loading]="saving()"
+      [disabled]="form.invalid"
+      class="!bg-brand-600 !border-brand-600 !rounded-xl !font-display !font-700"
+      (click)="save()">
+    </button>
+  </ng-template>
+</p-dialog>
