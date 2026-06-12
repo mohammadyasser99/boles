@@ -353,7 +353,7 @@ namespace CarRental.Application.Services
                 // ── 3. Fines ───────────────────────────────────────────────────────────
                 var fines = await _fineRepository
                     .GetAll()
-                    .Where(f => f.CarPlate == carPlate && f.ViolationDate.HasValue)
+                    .Where(f => f.Car.CarPlate == carPlate && f.ViolationDate.HasValue)
                     .ToListAsync();
 
                 var finesByMonth = fines
@@ -367,7 +367,7 @@ namespace CarRental.Application.Services
                 // ── 4. Entrance fees ───────────────────────────────────────────────────
                 var fees = await _entrancefeeRepository
                     .GetAll()
-                    .Where(e => e.CarPlate == carPlate && e.TripDate.HasValue)
+                    .Where(e => e.Car.CarPlate == carPlate && e.TripDate.HasValue)
                     .ToListAsync();
 
                 var feesByMonth = fees

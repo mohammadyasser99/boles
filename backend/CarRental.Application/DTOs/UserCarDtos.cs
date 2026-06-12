@@ -32,7 +32,9 @@ public record CarDtoo(
     string? Brand,
     string? Model,
     int? Year,
-    string? ChassisNumber
+    string? ChassisNumber,
+    Guid CarId
+
 );
 public record MarkPaymentPaidDto(int Month, int Year);
 
@@ -60,8 +62,8 @@ public record CreateUserWithCarDto(
     List<IFormFile>? DocumentFiles,
     List<Guid>? ExistingDocumentIds,
     List<decimal>? MonthlyAmounts,
-    decimal? DownPayment
-
+    decimal? DownPayment,
+    Guid CarId
 
 );
 public record UpdateUserWithDocumentDto(

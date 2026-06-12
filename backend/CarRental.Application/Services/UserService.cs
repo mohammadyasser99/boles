@@ -555,7 +555,8 @@ public class UserService : IUserService
                       c.Brand,
                       c.Model,
                       c.Year,
-                      c.ChassisNumber
+                      c.ChassisNumber,
+                      c.Id
                   ))
                   .FirstOrDefault(),
 

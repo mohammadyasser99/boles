@@ -62,8 +62,8 @@ namespace CarRental.Infrastructure.Services
             if (string.IsNullOrWhiteSpace(user.PhoneNumber))
                 throw new InvalidOperationException($"User '{user.Name}' has no phone number.");
 
-            var totalFines = await _fineRepository.GetAll().Where(x=>x.CarPlate==carPlate && x.IsPaid ==false).SumAsync(x=>x.Amount);
-            var totalEntranceFees = await _entranceFeeRepository.GetAll().Where(x => x.CarPlate == carPlate && x.IsPaid == false).SumAsync(x => x.Amount);
+            var totalFines = await _fineRepository.GetAll().Where(x=>x.Car.CarPlate==carPlate && x.IsPaid ==false).SumAsync(x=>x.Amount);
+            var totalEntranceFees = await _entranceFeeRepository.GetAll().Where(x => x.Car.CarPlate == carPlate && x.IsPaid == false).SumAsync(x => x.Amount);
             var totalDebt = totalFines + totalEntranceFees ;
 
             var message = BuildDebtReminderMessage(user.Name, carPlate, totalFines, totalEntranceFees, 0, totalDebt);
@@ -109,11 +109,11 @@ namespace CarRental.Infrastructure.Services
                 throw new InvalidOperationException($"User '{user.Name}' has no email address.");
 
             var totalFines = await _fineRepository.GetAll()
-                .Where(x => x.CarPlate == carPlate && x.IsPaid == false)
+                .Where(x => x.Car.CarPlate == carPlate && x.IsPaid == false)
                 .SumAsync(x => x.Amount);
 
             var totalEntranceFees = await _entranceFeeRepository.GetAll()
-                .Where(x => x.CarPlate == carPlate && x.IsPaid == false)
+                .Where(x => x.Car.CarPlate == carPlate && x.IsPaid == false)
                 .SumAsync(x => x.Amount);
 
             var totalDebt = totalFines + totalEntranceFees ;

@@ -49,8 +49,10 @@ public class AppDbContext : DbContext
         // ── Car ─────────────────────────────────────────────────────────────
         modelBuilder.Entity<Car>(e =>
         {
-            e.HasKey(c => c.CarPlate);
+            e.HasKey(c => c.Id);
             e.Property(c => c.CarPlate).HasMaxLength(20);
+            e.HasIndex(c => c.CarPlate)
+    .IsUnique();
             e.Property(c => c.ChassisNumber).HasMaxLength(17);
             e.HasIndex(u => u.ChassisNumber).IsUnique();
             e.HasOne(c => c.Client)
@@ -65,15 +67,14 @@ public class AppDbContext : DbContext
             e.HasKey(f => f.Id);
             e.Property(f => f.ViolationNumber).IsRequired().HasMaxLength(100);
             e.HasIndex(f => f.ViolationNumber).IsUnique();
-            e.Property(f => f.CarPlate).IsRequired().HasMaxLength(20);
+           // e.Property(f => f.CarPlate).HasMaxLength(20); // no longer a FK, just data
             e.Property(f => f.Amount).HasColumnType("decimal(18,2)");
             e.Property(f => f.Description).HasMaxLength(500);
 
             e.HasOne(f => f.Car)
              .WithMany(c => c.Fines)
-             .HasForeignKey(f => f.CarPlate)
-             .HasPrincipalKey(c => c.CarPlate)
-             .OnDelete(DeleteBehavior.Cascade);
+             .HasForeignKey(f => f.CarId)      // ✅ Guid FK
+             .OnDelete(DeleteBehavior.SetNull); // SetNull so fines survive car delete
         });
 
         // ── EntranceFee ─────────────────────────────────────────────────────────
@@ -82,16 +83,15 @@ public class AppDbContext : DbContext
             e.HasKey(f => f.Id);
             e.Property(f => f.TripNumber).IsRequired().HasMaxLength(100);
             e.HasIndex(f => f.TripNumber).IsUnique();
-            e.Property(f => f.CarPlate).IsRequired().HasMaxLength(20);
+      //      e.Property(f => f.CarPlate).HasMaxLength(20); // no longer a FK, just data
             e.Property(f => f.Amount).HasColumnType("decimal(18,2)");
             e.Property(f => f.GateName).HasMaxLength(200);
             e.Property(f => f.Direction).HasMaxLength(100);
 
             e.HasOne(f => f.Car)
              .WithMany(c => c.EntranceFees)
-             .HasForeignKey(f => f.CarPlate)
-             .HasPrincipalKey(c => c.CarPlate)
-             .OnDelete(DeleteBehavior.Cascade);
+             .HasForeignKey(f => f.CarId)      // ✅ Guid FK
+             .OnDelete(DeleteBehavior.SetNull);
         });
         // ── UserDocument ─────────────────────────────────────────────────────────
         modelBuilder.Entity<ClientDocument>(e =>

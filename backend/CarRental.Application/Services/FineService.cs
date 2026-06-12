@@ -150,7 +150,7 @@ public class FineService : IFineService
                     {
                         Id = Guid.NewGuid(),
                         ViolationNumber = row.ViolationNumber,
-                        CarPlate = row.CarPlate,
+                        Car=car,
                         Amount = row.Amount,
                         ViolationDate = row.ViolationDate,
                         Description = row.Description,
@@ -287,7 +287,7 @@ public class FineService : IFineService
         {
             var fines = await _fineRepository
                 .GetAll()
-                .Where(x => x.CarPlate == carPlate && !x.IsPaid)
+                .Where(x => x.Car.CarPlate == carPlate && !x.IsPaid)
                 .AsNoTracking()
                 .Select(x => new CarFineDto(x.ViolationNumber, x.Amount, x.ViolationDate))
                 .ToListAsync();
@@ -353,13 +353,13 @@ public class FineService : IFineService
             }
 
             _logger.LogDebug("Fine details: CarPlate={CarPlate}, Amount={Amount}, ViolationDate={ViolationDate}",
-                fine.CarPlate, fine.Amount, fine.ViolationDate);
+                fine.Car.CarPlate, fine.Amount, fine.ViolationDate);
 
             if (fine.Car?.Client == null)
             {
                 _logger.LogError("Cannot mark fine as paid: No client associated with car {CarPlate} for violation {ViolationNumber}",
-                    fine.CarPlate, ViolationNumber);
-                throw new InvalidOperationException($"Cannot mark fine as paid. No client is associated with car '{fine.CarPlate}'.");
+                    fine.Car.CarPlate, ViolationNumber);
+                throw new InvalidOperationException($"Cannot mark fine as paid. No client is associated with car '{fine.Car.CarPlate}'.");
             }
 
             fine.IsPaid = true;
@@ -428,7 +428,7 @@ public class FineService : IFineService
 
             if (!string.IsNullOrWhiteSpace(carPlate))
             {
-                query = query.Where(x => x.CarPlate.Contains(carPlate));
+                query = query.Where(x => x.Car.CarPlate.Contains(carPlate));
                 _logger.LogDebug("Filtering by car plate: {CarPlate}", carPlate);
             }
 
@@ -447,7 +447,7 @@ public class FineService : IFineService
                 .Take(pageSize)
                 .Select(x => new FineDetailsDto(
                     x.ViolationNumber,
-                    x.CarPlate,
+                    x.Car.CarPlate,
                     x.Amount,
                     x.IsPaid,
                     x.ViolationDate

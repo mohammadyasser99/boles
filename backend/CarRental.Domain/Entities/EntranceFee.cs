@@ -1,31 +1,21 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using CarRental.Domain.Entities;
 
-namespace CarRental.Domain.Entities
+public class EntranceFee
 {
-    public class EntranceFee
-    {
-        public Guid Id { get; set; }
+    public Guid Id { get; set; }
+    public string TripNumber { get; set; }
+  //  public string CarPlate { get; set; } // keep for display only
 
-        /// <summary>رقم الرحلة - unique trip reference, used for deduplication</summary>
-        public string TripNumber { get; set; }
+    // ── Replace CarPlate FK with CarId ──
+    public Guid? CarId { get; set; }
 
-        public string CarPlate { get; set; } 
+    public decimal Amount { get; set; }
+    public decimal? PaidAmount { get; set; }
+    public string? GateName { get; set; }
+    public string? Direction { get; set; }
+    public DateTime? TripDate { get; set; }
+    public DateTime ImportedAt { get; set; } = DateTime.UtcNow;
+    public bool IsPaid { get; set; } = false;
 
-        /// <summary>المبلغ (درهم إماراتي) - amount in AED</summary>
-        public decimal Amount { get; set; }
-        public decimal? PaidAmount { get; set; }
-
-        public string? GateName { get; set; }
-        public string? Direction { get; set; }
-        public DateTime? TripDate { get; set; }
-        public DateTime ImportedAt { get; set; } = DateTime.UtcNow;
-        public bool IsPaid { get; set; } = false;
-
-        // Navigation
-        public virtual Car? Car { get; set; }
-    }
+    public virtual Car? Car { get; set; }
 }

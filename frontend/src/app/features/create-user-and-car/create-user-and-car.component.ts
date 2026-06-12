@@ -121,7 +121,8 @@ this.form = this.fb.group({
     ]
   ],
 
-  userId: [null]
+  userId: [null],
+  carId: [null]
 },
 {
   validators: this.dateRangeValidator
@@ -252,7 +253,8 @@ this.form.patchValue({
   modelName: data.car?.model ?? '',
   year: data.car?.year ?? null,
   chassisNumber: data.car?.chassisNumber ?? '',
-  userId: data.id ?? userId
+  userId: data.id ?? userId,
+  carId: data.car?.carId ?? null
 });
 
       // ── Restore payment schedule from JSON string ──────────────────
@@ -343,6 +345,7 @@ private toDateOnly(value: any): string | null {
     // ❌ rentalPrice removed
 
     if (v.userId)         formData.append('userId',         v.userId);
+    if (v.carId)          formData.append('carId',          v.carId);
       // ✅ Format dates before sending
   const joinDate      = this.toDateOnly(v.joinDate);
   const contractExpiry = this.toDateOnly(v.contractExpiry);
@@ -406,7 +409,8 @@ reset() {
     modelName: '',
     year: null,
     chassisNumber: '',
-    userId: null
+    userId: null,
+    carId: null
   });
 
   this.paymentRows = [];

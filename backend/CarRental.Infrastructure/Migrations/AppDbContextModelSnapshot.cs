@@ -70,12 +70,17 @@ namespace CarRental.Infrastructure.Migrations
 
             modelBuilder.Entity("CarRental.Domain.Entities.Car", b =>
                 {
-                    b.Property<string>("CarPlate")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Brand")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CarPlate")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<string>("ChassisNumber")
                         .HasMaxLength(17)
@@ -90,7 +95,10 @@ namespace CarRental.Infrastructure.Migrations
                     b.Property<int?>("Year")
                         .HasColumnType("int");
 
-                    b.HasKey("CarPlate");
+                    b.HasKey("Id");
+
+                    b.HasIndex("CarPlate")
+                        .IsUnique();
 
                     b.HasIndex("ChassisNumber")
                         .IsUnique()
@@ -202,7 +210,7 @@ namespace CarRental.Infrastructure.Migrations
                     b.ToTable("ClientDocuments");
                 });
 
-            modelBuilder.Entity("CarRental.Domain.Entities.EntranceFee", b =>
+            modelBuilder.Entity("CarRental.Domain.Entities.Payment", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -211,10 +219,44 @@ namespace CarRental.Infrastructure.Migrations
                     b.Property<decimal>("Amount")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<string>("CarPlate")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                    b.Property<Guid>("CarId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateOnly>("PaidAt")
+                        .HasColumnType("date");
+
+                    b.Property<int>("PaymentType")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TripNumber")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ViolationNumber")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CarId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Payment");
+                });
+
+            modelBuilder.Entity("EntranceFee", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid?>("CarId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Direction")
                         .HasMaxLength(100)
@@ -243,7 +285,7 @@ namespace CarRental.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CarPlate");
+                    b.HasIndex("CarId");
 
                     b.HasIndex("TripNumber")
                         .IsUnique();
@@ -251,7 +293,7 @@ namespace CarRental.Infrastructure.Migrations
                     b.ToTable("EntranceFees");
                 });
 
-            modelBuilder.Entity("CarRental.Domain.Entities.Fine", b =>
+            modelBuilder.Entity("Fine", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -260,10 +302,8 @@ namespace CarRental.Infrastructure.Migrations
                     b.Property<decimal>("Amount")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<string>("CarPlate")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                    b.Property<Guid?>("CarId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Description")
                         .HasMaxLength(500)
@@ -288,49 +328,12 @@ namespace CarRental.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CarPlate");
+                    b.HasIndex("CarId");
 
                     b.HasIndex("ViolationNumber")
                         .IsUnique();
 
                     b.ToTable("Fines");
-                });
-
-            modelBuilder.Entity("CarRental.Domain.Entities.Payment", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<decimal>("Amount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("CarPlate")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<DateOnly>("PaidAt")
-                        .HasColumnType("date");
-
-                    b.Property<int>("PaymentType")
-                        .HasColumnType("int");
-
-                    b.Property<string>("TripNumber")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("ViolationNumber")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CarPlate");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("Payment");
                 });
 
             modelBuilder.Entity("CarRental.Domain.Entities.Car", b =>
@@ -354,33 +357,11 @@ namespace CarRental.Infrastructure.Migrations
                     b.Navigation("Client");
                 });
 
-            modelBuilder.Entity("CarRental.Domain.Entities.EntranceFee", b =>
-                {
-                    b.HasOne("CarRental.Domain.Entities.Car", "Car")
-                        .WithMany("EntranceFees")
-                        .HasForeignKey("CarPlate")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Car");
-                });
-
-            modelBuilder.Entity("CarRental.Domain.Entities.Fine", b =>
-                {
-                    b.HasOne("CarRental.Domain.Entities.Car", "Car")
-                        .WithMany("Fines")
-                        .HasForeignKey("CarPlate")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Car");
-                });
-
             modelBuilder.Entity("CarRental.Domain.Entities.Payment", b =>
                 {
                     b.HasOne("CarRental.Domain.Entities.Car", "Car")
                         .WithMany("Payments")
-                        .HasForeignKey("CarPlate")
+                        .HasForeignKey("CarId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -393,6 +374,26 @@ namespace CarRental.Infrastructure.Migrations
                     b.Navigation("Car");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("EntranceFee", b =>
+                {
+                    b.HasOne("CarRental.Domain.Entities.Car", "Car")
+                        .WithMany("EntranceFees")
+                        .HasForeignKey("CarId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Car");
+                });
+
+            modelBuilder.Entity("Fine", b =>
+                {
+                    b.HasOne("CarRental.Domain.Entities.Car", "Car")
+                        .WithMany("Fines")
+                        .HasForeignKey("CarId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Car");
                 });
 
             modelBuilder.Entity("CarRental.Domain.Entities.Car", b =>

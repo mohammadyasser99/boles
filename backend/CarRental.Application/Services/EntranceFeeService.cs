@@ -144,7 +144,7 @@ namespace CarRental.Application.Services
                     {
                         Id = Guid.NewGuid(),
                         TripNumber = row.TripNumber,
-                        CarPlate = row.CarPlate,
+                         Car=car,
                         Amount = row.Amount,
                         PaidAmount = paidAmount,
                         IsPaid = isPaid,
@@ -214,13 +214,13 @@ namespace CarRental.Application.Services
                 }
 
                 _logger.LogDebug("Entrance fee details: CarPlate={CarPlate}, Amount={Amount}, PaidAmount={PaidAmount}, TripDate={TripDate}",
-                    fee.CarPlate, fee.Amount, fee.PaidAmount, fee.TripDate);
+                    fee.Car.CarPlate, fee.Amount, fee.PaidAmount, fee.TripDate);
 
                 if (fee.Car?.Client == null)
                 {
                     _logger.LogError("Cannot mark entrance fee as paid: No client associated with car {CarPlate} for trip {TripNumber}",
-                        fee.CarPlate, tripNumber);
-                    throw new InvalidOperationException($"Cannot mark entrance fee as paid. No client is associated with car '{fee.CarPlate}'.");
+                        fee.Car.CarPlate, tripNumber);
+                    throw new InvalidOperationException($"Cannot mark entrance fee as paid. No client is associated with car '{fee.Car.CarPlate}'.");
                 }
 
                 fee.IsPaid = true;
@@ -279,7 +279,7 @@ namespace CarRental.Application.Services
             {
                 var fees = await _entranceFeeRepository
                     .GetAll()
-                    .Where(x => x.CarPlate == carPlate && !x.IsPaid)
+                    .Where(x => x.Car.CarPlate == carPlate && !x.IsPaid)
                     .AsNoTracking()
                     .Select(x => new EntranceFeeDto(x.TripNumber, x.Amount))
                     .ToListAsync();
@@ -333,7 +333,7 @@ namespace CarRental.Application.Services
 
                 if (!string.IsNullOrEmpty(carPlate))
                 {
-                    query = query.Where(x => x.CarPlate == carPlate);
+                    query = query.Where(x => x.Car.CarPlate == carPlate);
                     _logger.LogDebug("Filtering by car plate: {CarPlate}", carPlate);
                 }
 
@@ -358,7 +358,7 @@ namespace CarRental.Application.Services
                     .Take(pageSize)
                     .Select(x => new EntranceFeeDetailsDto(
                         x.TripNumber,
-                        x.CarPlate,
+                        x.Car.CarPlate,
                         x.Amount,
                         x.IsPaid,
                         x.TripDate,

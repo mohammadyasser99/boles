@@ -24,4 +24,8 @@
     <ProjectReference Include="..\CarRental.Application\CarRental.Application.csproj" />
     <ProjectReference Include="..\CarRental.Domain\CarRental.Domain.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Migrations\" />
+  </ItemGroup>
 </Project>

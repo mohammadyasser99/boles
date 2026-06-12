@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace CarRental.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class refactor : Migration
+    public partial class newinit : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -19,6 +19,7 @@ namespace CarRental.Infrastructure.Migrations
                     Name = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
                     Username = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     PasswordHash = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Locked = table.Column<bool>(type: "bit", nullable: false),
                     Role = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
                     RefreshToken = table.Column<string>(type: "nvarchar(512)", maxLength: 512, nullable: true),
                     RefreshTokenExpiry = table.Column<DateTime>(type: "datetime2", nullable: true)
@@ -38,7 +39,11 @@ namespace CarRental.Infrastructure.Migrations
                     Email = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
                     NationalId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     DateOfPayment = table.Column<DateOnly>(type: "date", nullable: true),
-                    JoinDate = table.Column<DateOnly>(type: "date", nullable: false)
+                    JoinDate = table.Column<DateOnly>(type: "date", nullable: false),
+                    ContractExpiry = table.Column<DateOnly>(type: "date", nullable: false),
+                    PaymentScheduleJson = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Balance = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    DownPayment = table.Column<decimal>(type: "decimal(18,2)", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -49,17 +54,17 @@ namespace CarRental.Infrastructure.Migrations
                 name: "Cars",
                 columns: table => new
                 {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     CarPlate = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
                     Brand = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Model = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Year = table.Column<int>(type: "int", nullable: true),
                     ChassisNumber = table.Column<string>(type: "nvarchar(17)", maxLength: 17, nullable: true),
-                    RentalPrice = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
                     ClientId = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Cars", x => x.CarPlate);
+                    table.PrimaryKey("PK_Cars", x => x.Id);
                     table.ForeignKey(
                         name: "FK_Cars_Clients_ClientId",
                         column: x => x.ClientId,
@@ -99,8 +104,9 @@ namespace CarRental.Infrastructure.Migrations
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     TripNumber = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    CarPlate = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    CarId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     Amount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    PaidAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
                     GateName = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
                     Direction = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
                     TripDate = table.Column<DateTime>(type: "datetime2", nullable: true),
@@ -111,11 +117,11 @@ namespace CarRental.Infrastructure.Migrations
                 {
                     table.PrimaryKey("PK_EntranceFees", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_EntranceFees_Cars_CarPlate",
-                        column: x => x.CarPlate,
+                        name: "FK_EntranceFees_Cars_CarId",
+                        column: x => x.CarId,
                         principalTable: "Cars",
-                        principalColumn: "CarPlate",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
                 });
 
             migrationBuilder.CreateTable(
@@ -124,8 +130,9 @@ namespace CarRental.Infrastructure.Migrations
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     ViolationNumber = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    CarPlate = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    CarId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     Amount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    PaidAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
                     ViolationDate = table.Column<DateTime>(type: "datetime2", nullable: true),
                     Description = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
                     ImportedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
@@ -135,11 +142,11 @@ namespace CarRental.Infrastructure.Migrations
                 {
                     table.PrimaryKey("PK_Fines", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Fines_Cars_CarPlate",
-                        column: x => x.CarPlate,
+                        name: "FK_Fines_Cars_CarId",
+                        column: x => x.CarId,
                         principalTable: "Cars",
-                        principalColumn: "CarPlate",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
                 });
 
             migrationBuilder.CreateTable(
@@ -150,17 +157,19 @@ namespace CarRental.Infrastructure.Migrations
                     Amount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     PaidAt = table.Column<DateOnly>(type: "date", nullable: false),
                     PaymentType = table.Column<int>(type: "int", nullable: false),
-                    CarPlate = table.Column<string>(type: "nvarchar(20)", nullable: false),
+                    TripNumber = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ViolationNumber = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    CarId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Payment", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Payment_Cars_CarPlate",
-                        column: x => x.CarPlate,
+                        name: "FK_Payment_Cars_CarId",
+                        column: x => x.CarId,
                         principalTable: "Cars",
-                        principalColumn: "CarPlate",
+                        principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_Payment_Clients_UserId",
@@ -174,6 +183,12 @@ namespace CarRental.Infrastructure.Migrations
                 name: "IX_Admins_Username",
                 table: "Admins",
                 column: "Username",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Cars_CarPlate",
+                table: "Cars",
+                column: "CarPlate",
                 unique: true);
 
             migrationBuilder.CreateIndex(
@@ -206,9 +221,9 @@ namespace CarRental.Infrastructure.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_EntranceFees_CarPlate",
+                name: "IX_EntranceFees_CarId",
                 table: "EntranceFees",
-                column: "CarPlate");
+                column: "CarId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_EntranceFees_TripNumber",
@@ -217,9 +232,9 @@ namespace CarRental.Infrastructure.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_Fines_CarPlate",
+                name: "IX_Fines_CarId",
                 table: "Fines",
-                column: "CarPlate");
+                column: "CarId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Fines_ViolationNumber",
@@ -228,9 +243,9 @@ namespace CarRental.Infrastructure.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_Payment_CarPlate",
+                name: "IX_Payment_CarId",
                 table: "Payment",
-                column: "CarPlate");
+                column: "CarId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Payment_UserId",
